@@ -1,0 +1,4 @@
+# Supabase CLI が生成するローカル用ファイル
+.branches
+.temp
+.env

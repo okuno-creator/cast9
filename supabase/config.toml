@@ -1,0 +1,3 @@
+# Supabase CLI 設定ファイル
+# `supabase link --project-ref <ref>` を実行すると、このIDがリモートプロジェクトと紐付きます
+project_id = "cast9"
