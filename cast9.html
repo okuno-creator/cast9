@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAST9</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --stage: #14141A;
+    --stage-2: #1D1E27;
+    --stage-3: #262733;
+    --paper: #EDEAE3;
+    --paper-dim: #C9C5BA;
+    --spotlight: #E8B84B;
+    --spotlight-dim: #7A6432;
+    --signal: #C4453B;
+    --trust: #3F8F63;
+    --ink: #F5F3EE;
+    --muted: #9394A3;
+    --hair: #34353F;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--stage);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .disp{font-family:'Shippori Mincho', serif;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  #app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--stage);}
+
+  /* Header */
+  header{
+    padding:22px 18px 16px;
+    border-bottom:1px solid var(--hair);
+    position:sticky;top:0;background:var(--stage);z-index:20;
+  }
+  .brand{display:flex;align-items:baseline;gap:8px;}
+  .brand .mark{
+    font-family:'Shippori Mincho',serif;font-weight:800;font-size:26px;color:var(--spotlight);
+    letter-spacing:1px;
+  }
+  .brand .sub{font-size:10px;color:var(--muted);letter-spacing:2px;font-family:'JetBrains Mono',monospace;}
+  nav{display:flex;gap:0;margin-top:16px;border-bottom:1px solid var(--hair);}
+  nav button{
+    flex:1;background:none;border:none;color:var(--muted);padding:10px 4px 12px;
+    font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:13px;cursor:pointer;
+    border-bottom:2px solid transparent;transition:.15s;
+  }
+  nav button.active{color:var(--spotlight);border-bottom:2px solid var(--spotlight);}
+
+  .company-bar{
+    display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+    background:var(--stage-2);border-bottom:1px solid var(--hair);font-size:11px;color:var(--paper-dim);
+  }
+  .company-bar strong{color:var(--spotlight);font-weight:700;}
+  .company-bar button{background:none;border:1px solid var(--hair);color:var(--muted);font-size:11px;padding:4px 10px;border-radius:12px;cursor:pointer;}
+
+  main{flex:1;padding:16px 16px 90px;overflow-y:auto;}
+
+  /* Filter bar */
+  .filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;}
+  .filters select, .filters input{
+    background:var(--stage-2);color:var(--ink);border:1px solid var(--hair);border-radius:20px;
+    padding:7px 12px;font-size:12px;font-family:'Zen Kaku Gothic New',sans-serif;white-space:nowrap;
+  }
+  .filters select:focus, .filters input:focus{outline:2px solid var(--spotlight);}
+
+  /* Card */
+  .grid{display:flex;flex-direction:column;gap:12px;}
+  .card{
+    background:var(--stage-2);border:1px solid var(--hair);border-radius:14px;padding:14px;
+    display:flex;gap:12px;cursor:pointer;transition:.15s;
+  }
+  .card:hover{border-color:var(--spotlight-dim);}
+  .avatar{
+    width:58px;height:58px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Shippori Mincho',serif;font-weight:700;font-size:20px;color:var(--stage);
+  }
+  .card-body{flex:1;min-width:0;}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+  .name{font-weight:700;font-size:15px;}
+  .tag{
+    font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.5px;
+  }
+  .tag.model{background:#2E3A52;color:#9FC1F0;}
+  .tag.actor{background:#452B4A;color:#E4A9EE;}
+  .tag.beginner{background:#2E4A38;color:#9FE0B5;}
+  .meta{font-size:12px;color:var(--muted);margin-top:4px;}
+  .row-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .price{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--spotlight);font-weight:700;}
+  .trust{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--trust);font-weight:700;}
+
+  /* Empty state */
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty .disp{font-size:18px;color:var(--paper-dim);margin-bottom:6px;}
+
+  /* FAB */
+  .fab{
+    position:absolute;bottom:24px;right:18px;background:var(--spotlight);color:var(--stage);
+    border:none;border-radius:30px;padding:13px 20px;font-weight:900;font-size:13px;
+    box-shadow:0 8px 20px rgba(0,0,0,.4);cursor:pointer;z-index:15;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,10,14,.7);z-index:100;
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .sheet{
+    background:var(--stage);width:100%;max-width:520px;max-height:92vh;overflow-y:auto;
+    border-radius:20px 20px 0 0;padding:0;animation:up .2s ease-out;
+  }
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .sheet-head{
+    position:sticky;top:0;background:var(--stage);padding:14px 16px;border-bottom:1px solid var(--hair);
+    display:flex;justify-content:space-between;align-items:center;z-index:5;
+  }
+  .sheet-head .disp{font-size:17px;}
+  .closeBtn{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;}
+  .sheet-body{padding:16px;}
+
+  .profile-hero{display:flex;gap:14px;align-items:center;margin-bottom:16px;}
+  .profile-hero .avatar{width:78px;height:78px;font-size:28px;}
+  .stat-strip{display:flex;gap:10px;margin:16px 0;}
+  .stat-box{flex:1;background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;padding:10px;text-align:center;}
+  .stat-box .num{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--spotlight);}
+  .stat-box .lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+
+  .section-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;margin:18px 0 8px;text-transform:uppercase;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{background:var(--stage-3);border:1px solid var(--hair);border-radius:14px;padding:5px 11px;font-size:12px;}
+  .chip.ng{color:var(--signal);border-color:#5a2c28;}
+  .chip.day{color:var(--ink);}
+
+  .bio{font-size:13px;line-height:1.7;color:var(--paper-dim);}
+  .video-link{display:flex;align-items:center;gap:8px;background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--spotlight);text-decoration:none;margin-top:8px;}
+
+  .price-list{background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;overflow:hidden;}
+  .price-row{display:flex;justify-content:space-between;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--hair);}
+  .price-row:last-child{border-bottom:none;}
+  .price-row .mono{font-family:'JetBrains Mono',monospace;color:var(--spotlight);font-weight:700;}
+
+  .admin-row{display:flex;align-items:center;gap:10px;border:1px solid var(--hair);border-radius:12px;padding:12px;}
+  .admin-row-info{flex:1;min-width:0;}
+  .admin-row-name{font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .admin-row-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .mini-btn{background:var(--stage-3);border:1px solid var(--hair);color:var(--ink);font-size:11px;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
+
+  .cta-row{display:flex;gap:8px;margin-top:20px;}
+  .btn{flex:1;padding:13px;border-radius:10px;border:none;font-weight:800;font-size:13px;cursor:pointer;}
+  .btn.primary{background:var(--spotlight);color:var(--stage);}
+  .btn.ghost{background:var(--stage-2);color:var(--ink);border:1px solid var(--hair);}
+
+  /* Chat */
+  .chat-wrap{display:flex;flex-direction:column;height:60vh;}
+  .chat-log{flex:1;overflow-y:auto;padding:10px 2px;display:flex;flex-direction:column;gap:8px;}
+  .bubble{max-width:75%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5;}
+  .bubble.me{align-self:flex-end;background:var(--spotlight);color:var(--stage);border-bottom-right-radius:2px;}
+  .bubble.them{align-self:flex-start;background:var(--stage-2);border:1px solid var(--hair);border-bottom-left-radius:2px;}
+  .chat-input{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--hair);}
+  .chat-input input{flex:1;background:var(--stage-2);border:1px solid var(--hair);border-radius:20px;padding:10px 14px;color:var(--ink);font-size:13px;}
+  .chat-input button{background:var(--spotlight);color:var(--stage);border:none;border-radius:20px;padding:0 18px;font-weight:800;cursor:pointer;}
+  .mini-icon-btn{background:var(--stage-2);color:var(--ink);border:1px solid var(--hair);border-radius:20px;padding:0 14px;font-size:15px;cursor:pointer;flex:0 0 auto;}
+  .image-bubble{padding:4px;background:none;border:none;}
+  .image-bubble img{max-width:220px;max-height:280px;border-radius:10px;display:block;object-fit:cover;}
+  .image-bubble.them{align-self:flex-start;}
+  .image-bubble.me{align-self:flex-end;}
+  .quote-toggle{width:100%;margin-top:8px;}
+  .quote-panel{background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;padding:12px;margin-top:8px;}
+  .quote-bubble{display:flex;flex-direction:column;gap:3px;min-width:190px;}
+  .quote-head{font-weight:800;font-size:11px;letter-spacing:.5px;}
+  .quote-line{font-size:12px;}
+  .quote-line.mono{font-family:'JetBrains Mono',monospace;font-weight:700;}
+  .quote-status{font-size:11px;margin-top:4px;font-weight:700;}
+  .quote-status.pending{color:var(--muted);}
+  .quote-status.accepted{color:var(--trust);}
+  .quote-status.cancelled{color:var(--signal);}
+  .bubble.system{align-self:center;background:none;color:var(--muted);font-size:11px;border:none;padding:4px 8px;text-align:center;}
+  .review-item{border-bottom:1px solid var(--hair);padding:12px 0;}
+  .review-item:last-child{border-bottom:none;}
+  .review-stars{color:var(--spotlight);font-size:14px;letter-spacing:1px;}
+  .review-meta{font-size:11px;color:var(--muted);margin:4px 0;}
+  .review-comment{font-size:13px;color:var(--paper-dim);line-height:1.6;}
+  .review-box{background:rgba(0,0,0,.15);border-radius:8px;padding:8px;margin-top:6px;}
+  .star-picker{display:flex;gap:4px;margin-top:4px;}
+  .star-btn{background:none;border:none;font-size:20px;color:var(--hair);cursor:pointer;padding:0;line-height:1;}
+  .star-btn.filled{color:var(--spotlight);}
+  .bubble-time{font-size:10px;opacity:.6;margin-top:3px;}
+  .bubble.me .bubble-time{text-align:right;}
+  .bubble.them .bubble-time{text-align:left;}
+  .img-time{text-align:center;padding:0 4px;}
+
+  /* Form */
+  label{display:block;font-size:11px;color:var(--muted);margin:12px 0 5px;font-weight:700;letter-spacing:.4px;}
+  input[type=text], input[type=number], textarea, select.full{
+    width:100%;background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;
+    padding:11px 12px;color:var(--ink);font-size:13px;font-family:'Zen Kaku Gothic New',sans-serif;
+  }
+  textarea{resize:vertical;min-height:70px;}
+  .day-picker{display:flex;gap:6px;flex-wrap:wrap;}
+  .day-toggle{padding:8px 12px;border-radius:8px;border:1px solid var(--hair);background:var(--stage-2);color:var(--muted);font-size:12px;cursor:pointer;}
+  .day-toggle.on{background:var(--spotlight);color:var(--stage);border-color:var(--spotlight);font-weight:700;}
+  .ng-picker{display:flex;flex-direction:column;gap:6px;}
+  .ng-item{display:flex;align-items:center;gap:8px;font-size:13px;}
+
+  /* Rankings */
+  .rank-tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;}
+  .rank-tabs button{
+    background:var(--stage-2);border:1px solid var(--hair);color:var(--muted);padding:7px 13px;
+    border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;
+  }
+  .rank-tabs button.active{background:var(--spotlight);color:var(--stage);border-color:var(--spotlight);}
+  .rank-row{display:flex;align-items:center;gap:12px;background:var(--stage-2);border:1px solid var(--hair);border-radius:12px;padding:12px;margin-bottom:10px;cursor:pointer;}
+  .clap{
+    width:38px;height:38px;flex-shrink:0;position:relative;border-radius:6px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;
+  }
+  .clap.top{
+    background:repeating-linear-gradient(135deg,#1a1a1a 0 6px,var(--spotlight) 6px 12px);
+    color:#0c0c0c;
+  }
+  .clap.top span{background:var(--ink);border-radius:4px;padding:2px 6px;}
+  .clap.reg{background:var(--stage-3);color:var(--muted);}
+  .rank-info{flex:1;min-width:0;}
+  .rank-name{font-weight:700;font-size:14px;}
+  .rank-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .rank-score{font-family:'JetBrains Mono',monospace;color:var(--spotlight);font-weight:700;font-size:14px;}
+
+  .note{font-size:11px;color:var(--muted);background:var(--stage-2);border:1px dashed var(--hair);border-radius:10px;padding:10px 12px;margin-bottom:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const AREAS = ["宮崎","福岡","熊本","鹿児島","佐賀","長崎","大分","九州全域"];
+const GENRES = [["model","モデル"],["actor","俳優"],["beginner","未経験"]];
+const NG_OPTIONS = ["水着・肌の露出が多い案件","政治・宗教色の強い案件","過去にトラブルのあった依頼者","深夜帯(22時以降)の撮影"];
+const TIME_SLOTS = ["早朝(6-9時)","午前(9-12時)","午後(12-17時)","夕方(17-19時)","夜(19-22時)","深夜(22時以降)"];
+const AVATAR_COLORS = ["#E8B84B","#9FC1F0","#E4A9EE","#9FE0B5","#F0A98D","#B7A9F0"];
+
+const SEED = [
+  {id:"s1", name:"三上 ひなた", genre:"model", area:"宮崎",
+   jobTypes:[{name:"SNS動画(単発)",price:20000},{name:"アパレルPV",price:45000},{name:"観光PR動画",price:50000}],
+   bio:"宮崎在住。アパレルPVや観光PR動画を中心に活動しています。自然光を活かした撮影が得意です。",
+   ng:["水着・肌の露出が多い案件"], days:["土","日"], timeSlots:["午前(9-12時)","午後(12-17時)"], video:"https://example.com/hinata-reel",
+   completion:98, delay:2, reply:95, totalJobs:34, bigClient:true, reviews:[
+     {rating:5, comment:"当日の対応がとても丁寧で、撮影もスムーズでした。", reviewerName:"まつ毛サロン 環那", ts: Date.now()-1000*60*60*24*30},
+     {rating:4, comment:"雰囲気作りが上手で助かりました。", reviewerName:"株式会社サンシャイン観光", ts: Date.now()-1000*60*60*24*60}
+   ], createdAt: Date.now()-1000*60*60*24*200},
+  {id:"s2", name:"黒木 蓮", genre:"actor", area:"福岡",
+   jobTypes:[{name:"企業VP出演",price:35000},{name:"短編ドラマ出演",price:80000},{name:"シネマティックPV主演",price:120000}],
+   bio:"舞台俳優からキャリアをスタート。企業VPのドラマ仕立て案件、短編ドラマ出演多数。",
+   ng:["深夜帯(22時以降)の撮影"], days:["月","火","水"], timeSlots:["夕方(17-19時)","夜(19-22時)"], video:"https://example.com/ren-showreel",
+   completion:100, delay:0, reply:88, totalJobs:52, bigClient:true, reviews:[], createdAt: Date.now()-1000*60*60*24*400},
+  {id:"s3", name:"星野 つむぎ", genre:"beginner", area:"鹿児島",
+   jobTypes:[{name:"地域PR動画(単発)",price:10000},{name:"SNS動画出演",price:15000},{name:"ポートレート撮影",price:25000}],
+   bio:"未経験ですが表現力には自信があります。地域のPR動画などから経験を積みたいです。",
+   ng:[], days:["土","日","金"], timeSlots:["早朝(6-9時)","午前(9-12時)"], video:"", 
+   completion:90, delay:5, reply:99, totalJobs:6, bigClient:false, reviews:[], createdAt: Date.now()-1000*60*60*24*20},
+  {id:"s4", name:"藤堂 かれん", genre:"model", area:"福岡",
+   jobTypes:[{name:"コスメPR動画",price:25000},{name:"SNS動画出演",price:30000},{name:"アパレルPV",price:60000}],
+   bio:"美容・コスメ系案件を中心に活動。ナチュラルな雰囲気が得意です。", 
+   ng:["政治・宗教色の強い案件"], days:["火","木","日"], timeSlots:["午後(12-17時)","夕方(17-19時)"], video:"https://example.com/karen-portfolio",
+   completion:96, delay:3, reply:91, totalJobs:21, bigClient:false, reviews:[], createdAt: Date.now()-1000*60*60*24*90},
+];
+
+const COMPANIES_SEED = [
+  {id:"c1", type:"company", name:"まつ毛サロン 環那", industry:"美容・サロン", area:"宮崎",
+   completion:97, delay:1, reply:93, totalJobs:8, reviews:[], createdAt: Date.now()-1000*60*60*24*150},
+  {id:"c2", type:"company", name:"株式会社サンシャイン観光", industry:"観光・地域PR", area:"宮崎",
+   completion:100, delay:0, reply:98, totalJobs:15, reviews:[], createdAt: Date.now()-1000*60*60*24*300},
+];
+
+let profiles = [];
+let companies = [];
+let currentCompanyId = null;
+let showCompanyModal = false;
+let companyFormDraft = { type:"company", name:"", industry:"", area:"宮崎" };
+let reviewsTarget = null; // {kind:'performer'|'company', id}
+let chats = {}; // profileId -> [{sender,text,ts}]
+let imageQueue = []; // 自動判定でreviewとなった画像の審査キュー(管理者画面で確認)
+let view = "browse"; // browse | rankings
+let filterArea = "";
+let filterGenre = "";
+let sortBy = "score";
+let openProfileId = null;
+let showForm = false;
+let chatOpenId = null;
+let rankTab = "total";
+let formDraft = { name:"", genre:"model", area:"宮崎", jobTypes:[{name:"",price:""}], bio:"", days:[], timeSlots:[], ng:[], ngOther:"", video:"" };
+
+async function init(){
+  // storage可否チェック(artifact外プレビュー等で失敗しても動くようにフォールバック)
+  let stored = null;
+  try{
+    if(window.storage){
+      const r = await window.storage.get("cast9_profiles", true).catch(()=>null);
+      stored = r ? JSON.parse(r.value) : null;
+    }
+  }catch(e){}
+  profiles = stored && stored.length ? stored : SEED;
+
+  let cstored = null;
+  try{
+    if(window.storage){
+      const r = await window.storage.get("cast9_chats", true).catch(()=>null);
+      cstored = r ? JSON.parse(r.value) : null;
+    }
+  }catch(e){}
+  chats = cstored || {};
+
+  let qstored = null;
+  try{
+    if(window.storage){
+      const r = await window.storage.get("cast9_imagequeue", true).catch(()=>null);
+      qstored = r ? JSON.parse(r.value) : null;
+    }
+  }catch(e){}
+  imageQueue = qstored || [];
+
+  let companiesStored = null;
+  try{
+    if(window.storage){
+      const r = await window.storage.get("cast9_companies", true).catch(()=>null);
+      companiesStored = r ? JSON.parse(r.value) : null;
+    }
+  }catch(e){}
+  companies = companiesStored && companiesStored.length ? companiesStored : COMPANIES_SEED;
+
+  let curCompany = null;
+  try{
+    if(window.storage){
+      const r = await window.storage.get("cast9_current_company", false).catch(()=>null);
+      curCompany = r ? r.value : null;
+    }
+  }catch(e){}
+  currentCompanyId = (curCompany && companies.find(c=>c.id===curCompany)) ? curCompany : (companies[0] ? companies[0].id : null);
+
+  render();
+}
+
+async function persist(){
+  try{
+    if(window.storage){
+      await window.storage.set("cast9_profiles", JSON.stringify(profiles), true).catch(()=>{});
+      await window.storage.set("cast9_chats", JSON.stringify(chats), true).catch(()=>{});
+      await window.storage.set("cast9_imagequeue", JSON.stringify(imageQueue), true).catch(()=>{});
+      await window.storage.set("cast9_companies", JSON.stringify(companies), true).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+async function persistCurrentCompany(){
+  try{
+    if(window.storage){
+      await window.storage.set("cast9_current_company", currentCompanyId, false).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+function trustScore(p){
+  const base = Math.round(p.completion*0.5 + (100-p.delay)*0.2 + p.reply*0.1);
+  return Math.max(0, base - (p.penaltyPoints||0));
+}
+function companyTrustScore(c){
+  if(!c) return 0;
+  const base = Math.round((c.completion||0)*0.5 + (100-(c.delay||0))*0.2 + (c.reply||0)*0.1);
+  return Math.max(0, base - (c.penaltyPoints||0));
+}
+function currentCompany(){
+  return companies.find(c=>c.id===currentCompanyId) || null;
+}
+function rankScore(p){
+  const jobsScore = Math.min(p.totalJobs,50)*0.6;
+  const bigBonus = p.bigClient ? 12 : 0;
+  return Math.round(trustScore(p)*0.6 + jobsScore + bigBonus);
+}
+function initials(name){ return name.trim().slice(0,1); }
+function avatarColor(id){
+  let h=0; for(const c of id) h+=c.charCodeAt(0);
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function genreLabel(g){ return GENRES.find(x=>x[0]===g)?.[1] || g; }
+function priceRange(p){
+  const jt = (p.jobTypes && p.jobTypes.length) ? p.jobTypes : [{price:10000},{price:30000}];
+  const prices = jt.map(j=>j.price);
+  return { min: Math.min(...prices), max: Math.max(...prices) };
+}
+
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function formatTime(ts){
+  if(!ts) return "";
+  return new Date(ts).toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+}
+
+function loadImageFromFile(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>h){ h = Math.round(h*maxDim/w); w = maxDim; }
+          else { w = Math.round(w*maxDim/h); h = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function moderateImage(dataUrl){
+  try{
+    const base64 = dataUrl.split(",")[1];
+    const mediaType = dataUrl.substring(5, dataUrl.indexOf(";"));
+    const prompt = `この画像は出演者キャスティングマッチングサービスのチャットで送信されようとしています。性的に露骨な内容、または暴力的・グロテスクな内容が含まれるか判定してください。
+以下のJSON形式のみで回答してください。前置きやコードブロック記法は不要です。
+{"verdict": "safe" または "block" または "review", "reason": "20文字程度の理由"}
+- 明らかに性的・暴力的で不適切な場合は "block"
+- 判断に迷う場合は "review"
+- 問題ない場合は "safe"`;
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 200,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+            { type: "text", text: prompt }
+          ]
+        }]
+      })
+    });
+    const data = await response.json();
+    const text = (data.content||[]).map(b=>b.text||"").join("");
+    const clean = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(clean);
+  }catch(e){
+    // 判定に失敗した場合は安全側に倒し、審査キューに回す
+    return { verdict:"review", reason:"自動判定に失敗したため念のため審査対象にしました" };
+  }
+}
+
+// 長辺・画質を段階的に落として、容量が一定サイズを超えないようにする
+async function compressImageToLimit(file, limitBytes=350000){
+  let maxDim = 1200, quality = 0.75;
+  let dataUrl = await loadImageFromFile(file, maxDim, quality);
+  let tries = 0;
+  while(dataUrl.length*0.75 > limitBytes && tries < 6){
+    if(quality > 0.35) quality -= 0.15;
+    else maxDim = Math.round(maxDim*0.75);
+    dataUrl = await loadImageFromFile(file, maxDim, quality);
+    tries++;
+  }
+  return dataUrl;
+}
+
+function render(){
+  const app = document.getElementById("app");
+  const co = currentCompany();
+  app.innerHTML = `
+    <header>
+      <div class="brand"><span class="mark">CAST9</span><span class="sub">九州キャスティング・マッチング</span></div>
+      <nav>
+        <button class="${view==='browse'?'active':''}" data-nav="browse">さがす</button>
+        <button class="${view==='rankings'?'active':''}" data-nav="rankings">ランキング</button>
+      </nav>
+    </header>
+    <div class="company-bar" id="companyBar">
+      <span>依頼者として: <strong>${co ? escapeHtml(co.name) : '未設定'}</strong>${co ? ` (信用${companyTrustScore(co)})` : ''}</span>
+      <button id="companyBarBtn">切替 ▾</button>
+    </div>
+    <main id="main"></main>
+    <button class="fab" id="fabBtn">＋ 出演者登録</button>
+    <div id="modalRoot"></div>
+  `;
+  document.querySelectorAll("[data-nav]").forEach(b=>{
+    b.addEventListener("click", ()=>{ view = b.dataset.nav; render(); });
+  });
+  const fabBtn = document.getElementById("fabBtn");
+  if(fabBtn) fabBtn.addEventListener("click", ()=>{ showForm = true; renderModal(); });
+  document.getElementById("companyBarBtn").addEventListener("click", ()=>{ showCompanyModal = true; renderModal(); });
+
+  if(view==="browse") renderBrowse();
+  else renderRankings();
+  renderModal();
+}
+
+function renderBrowse(){
+  const main = document.getElementById("main");
+  const areaOpts = AREAS.map(a=>`<option value="${a}" ${filterArea===a?'selected':''}>${a}</option>`).join("");
+  main.innerHTML = `
+    <div class="filters">
+      <select id="fArea"><option value="">エリア:すべて</option>${areaOpts}</select>
+      <select id="fGenre">
+        <option value="">区分:すべて</option>
+        ${GENRES.map(([v,l])=>`<option value="${v}" ${filterGenre===v?'selected':''}>${l}</option>`).join("")}
+      </select>
+      <select id="fSort">
+        <option value="score" ${sortBy==='score'?'selected':''}>信用スコア順</option>
+        <option value="priceAsc" ${sortBy==='priceAsc'?'selected':''}>価格が安い順</option>
+        <option value="new" ${sortBy==='new'?'selected':''}>新着順</option>
+      </select>
+    </div>
+    <div class="grid" id="cardGrid"></div>
+  `;
+  document.getElementById("fArea").addEventListener("change", e=>{ filterArea=e.target.value; renderBrowse(); });
+  document.getElementById("fGenre").addEventListener("change", e=>{ filterGenre=e.target.value; renderBrowse(); });
+  document.getElementById("fSort").addEventListener("change", e=>{ sortBy=e.target.value; renderBrowse(); });
+
+  let list = profiles.filter(p=>{
+    if(p.suspended) return false;
+    if(filterArea && p.area!==filterArea) return false;
+    if(filterGenre && p.genre!==filterGenre) return false;
+    return true;
+  });
+  if(sortBy==="score") list.sort((a,b)=>trustScore(b)-trustScore(a));
+  if(sortBy==="priceAsc") list.sort((a,b)=>priceRange(a).min-priceRange(b).min);
+  if(sortBy==="new") list.sort((a,b)=>b.createdAt-a.createdAt);
+
+  const grid = document.getElementById("cardGrid");
+  if(!list.length){
+    grid.innerHTML = `<div class="empty"><div class="disp">該当する出演者が見つかりません</div>条件を変えて再検索してください</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(p=>`
+    <div class="card" data-open="${p.id}">
+      <div class="avatar" style="background:${avatarColor(p.id)}">${initials(p.name)}</div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="name">${escapeHtml(p.name)}</span>
+          <span class="tag ${p.genre}">${genreLabel(p.genre)}</span>
+        </div>
+        <div class="meta">${p.area} ・ 稼働実績 ${p.totalJobs}件${p.bigClient?' ・ 大手企業実績あり':''}</div>
+        <div class="row-bottom">
+          <span class="price">¥${priceRange(p).min.toLocaleString()}〜${p.jobTypes && p.jobTypes.length>1 ? `<span style="color:var(--muted);font-weight:400;"> (${p.jobTypes.length}種類)</span>` : ''}</span>
+          <span class="trust">● 信用 ${trustScore(p)}</span>
+        </div>
+      </div>
+    </div>
+  `).join("");
+  grid.querySelectorAll("[data-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{ openProfileId = el.dataset.open; renderModal(); });
+  });
+}
+
+function renderRankings(){
+  const main = document.getElementById("main");
+  const tabs = [
+    ["total","総合"], ["newcomer","新人(6ヶ月以内)"], ["rising","急上昇"], ["area","宮崎エリア"]
+  ];
+  main.innerHTML = `
+    <div class="note">※デモ版のランキングです。信用スコア・稼働数・大手企業実績を独自配分で加重した参考値です。</div>
+    <div class="rank-tabs">${tabs.map(([v,l])=>`<button data-rt="${v}" class="${rankTab===v?'active':''}">${l}</button>`).join("")}</div>
+    <div id="rankList"></div>
+  `;
+  document.querySelectorAll("[data-rt]").forEach(b=>{
+    b.addEventListener("click", ()=>{ rankTab=b.dataset.rt; renderRankings(); });
+  });
+
+  let list = profiles.filter(p=>!p.suspended);
+  const now = Date.now();
+  if(rankTab==="newcomer") list = list.filter(p=> now-p.createdAt < 1000*60*60*24*180);
+  if(rankTab==="area") list = list.filter(p=> p.area==="宮崎");
+  if(rankTab==="rising") list.sort((a,b)=> (now-a.createdAt) - (now-b.createdAt)); // 新しい順を疑似的な急上昇に
+  else list.sort((a,b)=> rankScore(b)-rankScore(a));
+
+  const rankList = document.getElementById("rankList");
+  if(!list.length){
+    rankList.innerHTML = `<div class="empty"><div class="disp">対象者がいません</div>まだこのカテゴリの実績者がいません</div>`;
+    return;
+  }
+  rankList.innerHTML = list.map((p,i)=>`
+    <div class="rank-row" data-open="${p.id}">
+      <div class="clap ${i<3?'top':'reg'}">${i<3? `<span>${i+1}</span>` : (i+1)}</div>
+      <div class="rank-info">
+        <div class="rank-name">${escapeHtml(p.name)} <span class="tag ${p.genre}" style="margin-left:6px;">${genreLabel(p.genre)}</span></div>
+        <div class="rank-sub">${p.area} ・ 稼働${p.totalJobs}件 ・ 信用${trustScore(p)}</div>
+      </div>
+      <div class="rank-score">${rankScore(p)}pt</div>
+    </div>
+  `).join("");
+  rankList.querySelectorAll("[data-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{ openProfileId = el.dataset.open; renderModal(); });
+  });
+}
+
+function renderModal(){
+  const root = document.getElementById("modalRoot");
+  if(reviewsTarget){ renderReviewsModal(root); return; }
+  if(chatOpenId){ renderChatModal(root); return; }
+  if(showForm){ renderFormModal(root); return; }
+  if(showCompanyModal){ renderCompanyModal(root); return; }
+  if(openProfileId){ renderProfileModal(root); return; }
+  root.innerHTML = "";
+}
+
+function renderReviewsModal(root){
+  const { kind, id } = reviewsTarget;
+  const target = kind === "company" ? companies.find(x=>x.id===id) : profiles.find(x=>x.id===id);
+  if(!target){ reviewsTarget = null; root.innerHTML = ""; return; }
+  const reviews = (target.reviews || []).slice().sort((a,b)=>b.ts-a.ts);
+  root.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="sheet">
+        <div class="sheet-head">
+          <span class="disp">${escapeHtml(target.name)} さんへのレビュー</span>
+          <button class="closeBtn" id="closeReviews">×</button>
+        </div>
+        <div class="sheet-body">
+          ${reviews.length ? reviews.map(r=>`
+            <div class="review-item">
+              <div class="review-stars">${'⭐'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+              <div class="review-meta">${escapeHtml(r.reviewerName||"匿名")}${r.jobType ? ` ・ ${escapeHtml(r.jobType)}` : ''} ・ ${new Date(r.ts).toLocaleDateString('ja-JP')}</div>
+              ${r.comment ? `<div class="review-comment">${escapeHtml(r.comment)}</div>` : `<div class="review-comment" style="color:var(--muted);">(コメントなし)</div>`}
+            </div>
+          `).join("") : `<div class="empty"><div class="disp">まだレビューがありません</div></div>`}
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("ov").addEventListener("click", e=>{ if(e.target.id==="ov"){ reviewsTarget=null; renderModal(); }});
+  document.getElementById("closeReviews").addEventListener("click", ()=>{ reviewsTarget=null; renderModal(); });
+}
+
+function renderCompanyModal(root){
+  const areaOpts = AREAS.map(a=>`<option value="${a}" ${companyFormDraft.area===a?'selected':''}>${a}</option>`).join("");
+  root.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="sheet">
+        <div class="sheet-head">
+          <span class="disp">依頼者(企業)を選択</span>
+          <button class="closeBtn" id="closeCompanyModal">×</button>
+        </div>
+        <div class="sheet-body">
+          <div class="note">見積もりを送る際、どの企業として依頼しているかが出演者側に表示されます。</div>
+          <div class="chips" style="flex-direction:column;gap:8px;">
+            ${companies.filter(c=>!c.suspended).map(c=>`
+              <div class="admin-row" style="background:var(--stage-2);${c.id===currentCompanyId?'border-color:var(--spotlight);':''}">
+                <div class="admin-row-info">
+                  <div class="admin-row-name">${c.type==='individual' ? '👤' : '🏢'} ${escapeHtml(c.name)} ${c.id===currentCompanyId?'<span class="tag model">選択中</span>':''}</div>
+                  <div class="admin-row-sub">${c.type==='individual' ? '個人' : escapeHtml(c.industry||"企業")} ・ ${escapeHtml(c.area||"")} ・ 信用${companyTrustScore(c)} ・ 依頼実績${c.totalJobs||0}件</div>
+                  <button class="mini-icon-btn" data-view-company-reviews="${c.id}" style="margin-top:6px;font-size:11px;padding:4px 10px;">レビューを見る</button>
+                </div>
+                ${c.id!==currentCompanyId ? `<button class="mini-btn" data-select-company="${c.id}">これにする</button>` : ''}
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="section-title" style="margin-top:20px;">新しい依頼者を登録</div>
+          <label>依頼者のタイプ</label>
+          <div class="day-picker">
+            <button type="button" class="day-toggle ${companyFormDraft.type==='company'?'on':''}" data-co-type="company">🏢 企業</button>
+            <button type="button" class="day-toggle ${companyFormDraft.type==='individual'?'on':''}" data-co-type="individual">👤 個人</button>
+          </div>
+          <label>${companyFormDraft.type==='individual' ? 'お名前・ニックネーム' : '企業・屋号名'}</label>
+          <input type="text" id="coName" placeholder="${companyFormDraft.type==='individual' ? '例:さくら' : '例:株式会社◯◯'}" value="${escapeHtml(companyFormDraft.name)}">
+          ${companyFormDraft.type!=='individual' ? `
+          <label>業種</label>
+          <input type="text" id="coIndustry" placeholder="例:美容サロン、観光PRなど" value="${escapeHtml(companyFormDraft.industry)}">
+          ` : ''}
+          <label>エリア</label>
+          <select class="full" id="coArea">${areaOpts}</select>
+          <button class="btn primary" id="coSubmit" style="width:100%;margin-top:14px;">登録してこの依頼者で利用する</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("ov").addEventListener("click", e=>{ if(e.target.id==="ov"){ showCompanyModal=false; renderModal(); }});
+  document.getElementById("closeCompanyModal").addEventListener("click", ()=>{ showCompanyModal=false; renderModal(); });
+
+  document.querySelectorAll("[data-select-company]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      currentCompanyId = btn.dataset.selectCompany;
+      await persistCurrentCompany();
+      showCompanyModal = false;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-view-company-reviews]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      reviewsTarget = { kind:"company", id: btn.dataset.viewCompanyReviews };
+      renderModal();
+    });
+  });
+
+  document.querySelectorAll("[data-co-type]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      companyFormDraft.type = btn.dataset.coType;
+      const nameInput = document.getElementById("coName");
+      if(nameInput) companyFormDraft.name = nameInput.value;
+      const industryInput = document.getElementById("coIndustry");
+      if(industryInput) companyFormDraft.industry = industryInput.value;
+      renderCompanyModal(root);
+    });
+  });
+
+  document.getElementById("coSubmit").addEventListener("click", async ()=>{
+    const name = document.getElementById("coName").value.trim();
+    const industryEl = document.getElementById("coIndustry");
+    const industry = industryEl ? industryEl.value.trim() : "";
+    const area = document.getElementById("coArea").value;
+    const type = companyFormDraft.type;
+    if(!name){ alert(type==='individual' ? "お名前を入力してください" : "企業・屋号名を入力してください"); return; }
+    const newCo = {
+      id: "co"+Date.now(), type, name, industry, area,
+      completion: 100, delay: 0, reply: 90, totalJobs: 0, reviews: [], createdAt: Date.now()
+    };
+    companies.push(newCo);
+    currentCompanyId = newCo.id;
+    await persist();
+    await persistCurrentCompany();
+    companyFormDraft = { type:"company", name:"", industry:"", area:"宮崎" };
+    showCompanyModal = false;
+    render();
+  });
+}
+
+function renderProfileModal(root){
+  const p = profiles.find(x=>x.id===openProfileId);
+  if(!p){ openProfileId=null; root.innerHTML=""; return; }
+  root.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="sheet">
+        <div class="sheet-head">
+          <span class="disp">プロフィール</span>
+          <button class="closeBtn" id="closeProfile">×</button>
+        </div>
+        <div class="sheet-body">
+          <div class="profile-hero">
+            <div class="avatar" style="background:${avatarColor(p.id)}">${initials(p.name)}</div>
+            <div>
+              <div class="name" style="font-size:18px;">${escapeHtml(p.name)}</div>
+              <div class="meta">${p.area} ・ <span class="tag ${p.genre}">${genreLabel(p.genre)}</span></div>
+            </div>
+          </div>
+
+          <div class="stat-strip">
+            <div class="stat-box" id="viewReviewsBtn" style="cursor:pointer;"><div class="num">${trustScore(p)}</div><div class="lbl">信用スコア(タップでレビュー)</div></div>
+            <div class="stat-box"><div class="num">${p.totalJobs}</div><div class="lbl">累計案件数</div></div>
+            <div class="stat-box"><div class="num">${p.reply}%</div><div class="lbl">返信速度</div></div>
+          </div>
+
+          <div class="section-title">案件タイプ別の料金</div>
+          <div class="price-list">
+            ${(p.jobTypes||[]).map(j=>`
+              <div class="price-row"><span>${escapeHtml(j.name)}</span><span class="mono">¥${j.price.toLocaleString()}</span></div>
+            `).join("")}
+          </div>
+
+          <div class="section-title">プロフィール</div>
+          <div class="bio">${escapeHtml(p.bio)}${p.bigClient ? '<br><br>※大手企業案件の実績あり' : ''}</div>
+
+          <div class="section-title">出演可能な曜日</div>
+          <div class="chips">${p.days.map(d=>`<span class="chip day">${d}曜</span>`).join("") || '<span class="meta">未設定</span>'}</div>
+
+          <div class="section-title">出演可能な時間帯</div>
+          <div class="chips">${(p.timeSlots||[]).map(t=>`<span class="chip day">${escapeHtml(t)}</span>`).join("") || '<span class="meta">未設定</span>'}</div>
+
+          <div class="section-title">出演NGの条件</div>
+          <div class="chips">${p.ng.length ? p.ng.map(n=>`<span class="chip ng">${escapeHtml(n)}</span>`).join("") : '<span class="meta">特になし</span>'}</div>
+
+          ${p.video ? `<div class="section-title">参考動画</div><a class="video-link" href="${p.video}" target="_blank" rel="noopener">▶ ${p.video}</a>` : ''}
+
+          <div class="cta-row">
+            <button class="btn ghost" id="closeProfile2">閉じる</button>
+            <button class="btn primary" id="openChat">メッセージを送る</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("ov").addEventListener("click", e=>{ if(e.target.id==="ov"){ openProfileId=null; renderModal(); }});
+  document.getElementById("closeProfile").addEventListener("click", ()=>{ openProfileId=null; renderModal(); });
+  document.getElementById("closeProfile2").addEventListener("click", ()=>{ openProfileId=null; renderModal(); });
+  document.getElementById("openChat").addEventListener("click", ()=>{ chatOpenId = p.id; renderModal(); });
+  document.getElementById("viewReviewsBtn").addEventListener("click", ()=>{
+    reviewsTarget = { kind:"performer", id: p.id };
+    renderModal();
+  });
+}
+
+function renderChatModal(root){
+  const p = profiles.find(x=>x.id===chatOpenId);
+  if(!p){ chatOpenId=null; root.innerHTML=""; return; }
+  const log = chats[p.id] || [];
+  const jobOpts = (p.jobTypes||[]).map((j,i)=>`<option value="${i}">${escapeHtml(j.name)}(¥${j.price.toLocaleString()})</option>`).join("");
+  root.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="sheet">
+        <div class="sheet-head">
+          <span class="disp">${escapeHtml(p.name)} さんとのやり取り</span>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="mini-icon-btn" id="backToBrowse" style="font-size:11px;padding:6px 10px;">一覧に戻る</button>
+            <button class="closeBtn" id="closeChat" title="プロフィールに戻る">×</button>
+          </div>
+        </div>
+        <div class="sheet-body">
+          <div class="note">※連絡先(メール・電話番号)はやり取りせず、必ずサービス内のこのチャットで完結させてください。画像は送信前に自動チェックされます。</div>
+          <div class="chat-wrap">
+            <div class="chat-log" id="chatLog">
+              ${log.length ? log.map(m=>renderBubble(m)).join("") : `<div class="empty" style="padding:30px 10px;">まだメッセージはありません<br>依頼内容や希望日時を送ってみましょう</div>`}
+            </div>
+            <div class="chat-input">
+              <input type="text" id="chatInput" placeholder="メッセージを入力...">
+              <button class="mini-icon-btn" id="imgBtn" title="画像を送る">📷</button>
+              <button id="chatSend">送信</button>
+            </div>
+            <input type="file" id="imgFile" accept="image/*" style="display:none;">
+            <div id="imgStatus" class="note" style="display:none;margin-top:8px;">画像を圧縮しています...</div>
+            <button class="btn ghost quote-toggle" id="toggleQuote">📋 金額・日程を提案する(見積もり)</button>
+            <div class="quote-panel" id="quotePanel" style="display:none;">
+              <div class="note" style="margin:0 0 10px;">通常のメッセージとは別に、案件タイプ・金額・希望日をまとめて提案できます。相手が確認すると自動的に成立扱いになります。</div>
+              <label>案件タイプ</label>
+              <select class="full" id="qJobType">${jobOpts}</select>
+              <label>希望日時</label>
+              <input type="text" id="qDate" placeholder="例:2026/08/10 13:00〜">
+              <label>提示金額(円)</label>
+              <input type="number" id="qAmount" value="${p.jobTypes?.[0]?.price || 20000}">
+              <button class="btn primary" id="qSend" style="width:100%;margin-top:10px;">この内容で見積もりを送る</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  const scrollBottom = ()=>{ const l=document.getElementById("chatLog"); l.scrollTop = l.scrollHeight; };
+  scrollBottom();
+  document.getElementById("ov").addEventListener("click", e=>{ if(e.target.id==="ov"){ chatOpenId=null; renderModal(); }});
+  document.getElementById("closeChat").addEventListener("click", ()=>{ chatOpenId=null; renderModal(); });
+  document.getElementById("backToBrowse").addEventListener("click", ()=>{
+    chatOpenId = null;
+    openProfileId = null;
+    view = "browse";
+    render();
+  });
+
+  document.getElementById("toggleQuote").addEventListener("click", ()=>{
+    const panel = document.getElementById("quotePanel");
+    panel.style.display = panel.style.display==="none" ? "block" : "none";
+  });
+  const qJobType = document.getElementById("qJobType");
+  if(qJobType){
+    qJobType.addEventListener("change", ()=>{
+      const jt = p.jobTypes[parseInt(qJobType.value)];
+      if(jt) document.getElementById("qAmount").value = jt.price;
+    });
+  }
+
+  async function send(){
+    const input = document.getElementById("chatInput");
+    const text = input.value.trim();
+    if(!text) return;
+    if(!chats[p.id]) chats[p.id]=[];
+    chats[p.id].push({sender:"me", text, ts:Date.now()});
+    input.value="";
+    await persist();
+    renderChatModal(root);
+    // 疑似的な自動応答(デモ用)
+    setTimeout(async ()=>{
+      chats[p.id].push({sender:"them", text:"ご連絡ありがとうございます。内容を確認して折り返しますね。", ts:Date.now()});
+      await persist();
+      if(chatOpenId===p.id) renderChatModal(root);
+    }, 700);
+  }
+  document.getElementById("chatSend").addEventListener("click", send);
+  document.getElementById("chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
+
+  document.getElementById("imgBtn").addEventListener("click", ()=>{
+    document.getElementById("imgFile").click();
+  });
+  document.getElementById("imgFile").addEventListener("change", async (e)=>{
+    const file = e.target.files[0];
+    e.target.value = "";
+    if(!file) return;
+    if(!file.type.startsWith("image/")){ alert("画像ファイルを選択してください"); return; }
+    const statusEl = document.getElementById("imgStatus");
+    statusEl.style.display = "block";
+    statusEl.textContent = "画像を圧縮しています...";
+    try{
+      const dataUrl = await compressImageToLimit(file);
+      statusEl.textContent = "画像を確認しています...";
+      const mod = await moderateImage(dataUrl);
+
+      if(mod.verdict === "block"){
+        statusEl.style.display = "none";
+        alert("この画像は不適切と判断されたため送信できませんでした。\n理由:"+(mod.reason||"詳細不明"));
+        return;
+      }
+
+      const msgId = "img"+Date.now();
+      if(!chats[p.id]) chats[p.id]=[];
+      chats[p.id].push({id: msgId, sender:"me", type:"image", dataUrl, ts:Date.now(), moderation: mod.verdict});
+
+      if(mod.verdict === "review"){
+        imageQueue.push({id: msgId, chatId: p.id, dataUrl, reason: mod.reason||"", ts: Date.now(), status:"pending"});
+      }
+
+      await persist();
+      renderChatModal(root);
+    }catch(err){
+      alert("画像の処理に失敗しました。別の画像でお試しください。");
+      statusEl.style.display = "none";
+    }
+  });
+
+  async function sendQuote(){
+    const idx = parseInt(document.getElementById("qJobType").value) || 0;
+    const jt = (p.jobTypes && p.jobTypes[idx]) || {name:"出演", price:20000};
+    const date = document.getElementById("qDate").value.trim() || "日程調整中";
+    const amount = parseInt(document.getElementById("qAmount").value) || jt.price;
+    const id = "q"+Date.now();
+    const co = currentCompany();
+    if(!chats[p.id]) chats[p.id]=[];
+    chats[p.id].push({
+      id, sender:"me", type:"quote", jobType:jt.name, amount, date, status:"pending", ts:Date.now(),
+      companyName: co ? co.name : "個人依頼者", companyScore: co ? companyTrustScore(co) : null,
+      performerName: p.name
+    });
+    await persist();
+    renderChatModal(root);
+    setTimeout(async ()=>{
+      const msg = (chats[p.id]||[]).find(x=>x.id===id);
+      if(!msg || msg.status !== "pending") return; // 取り消し済みなら何もしない
+      msg.status = "accepted";
+      chats[p.id].push({type:"system", text:"エスクロー決済(デモ)が完了しました。案件が成立しました。", ts:Date.now()});
+      const prof = profiles.find(x=>x.id===p.id);
+      if(prof) prof.totalJobs = (prof.totalJobs||0) + 1;
+      if(co) co.totalJobs = (co.totalJobs||0) + 1;
+      await persist();
+      if(chatOpenId===p.id) renderChatModal(root);
+    }, 1300);
+  }
+  document.getElementById("qSend").addEventListener("click", sendQuote);
+
+  document.querySelectorAll("[data-cancel-quote]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const msg = (chats[p.id]||[]).find(x=>x.id===btn.dataset.cancelQuote);
+      if(msg && msg.status==="pending"){
+        msg.status = "cancelled";
+        await persist();
+        renderChatModal(root);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-star-target]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const msgId = btn.dataset.starTarget;
+      const n = parseInt(btn.dataset.star);
+      const picker = document.querySelector(`[data-star-picker="${msgId}"]`);
+      if(picker){
+        picker.dataset.current = n;
+        picker.querySelectorAll("[data-star]").forEach(b=>{
+          b.classList.toggle("filled", parseInt(b.dataset.star) <= n);
+        });
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-submit-review]").forEach(btn=>{
+    btn.addEventListener("click", ()=> submitReview(btn.dataset.submitReview));
+  });
+
+  async function submitReview(msgId){
+    const msg = (chats[p.id]||[]).find(x=>x.id===msgId);
+    if(!msg) return;
+    const picker = document.querySelector(`[data-star-picker="${msgId}"]`);
+    const rating = parseInt(picker?.dataset.current || "5");
+    const commentEl = document.getElementById("reviewComment-"+msgId);
+    const comment = commentEl ? commentEl.value.trim() : "";
+
+    msg.myReviewSubmitted = true;
+    msg.myReview = { rating, comment };
+
+    const co = currentCompany();
+    const reviewerName = co ? co.name : "個人依頼者";
+    if(!p.reviews) p.reviews = [];
+    p.reviews.unshift({ rating, comment, reviewerName, jobType: msg.jobType, ts: Date.now() });
+
+    await persist();
+    renderChatModal(root);
+
+    // 出演者側からの評価も疑似的にシミュレート(デモ用)
+    setTimeout(async ()=>{
+      const simRating = Math.random() < 0.85 ? 5 : 4;
+      const simComments = [
+        "スケジュール調整もスムーズで、また依頼したいと思いました。",
+        "当日の指示が明確で、安心して撮影に臨めました。",
+        "丁寧なやり取りをありがとうございました。"
+      ];
+      const simComment = simComments[Math.floor(Math.random()*simComments.length)];
+      msg.theirReviewSubmitted = true;
+      msg.theirReview = { rating: simRating, comment: simComment };
+      if(co){
+        if(!co.reviews) co.reviews = [];
+        co.reviews.unshift({ rating: simRating, comment: simComment, reviewerName: p.name, jobType: msg.jobType, ts: Date.now() });
+      }
+      await persist();
+      if(chatOpenId===p.id) renderChatModal(root);
+    }, 1000);
+  }
+}
+
+function renderBubble(m){
+  const time = formatTime(m.ts);
+  if(m.type==="image"){
+    return `<div class="bubble ${m.sender==='me'?'me':'them'} image-bubble">
+      <img src="${m.dataUrl}" alt="送信された画像" loading="lazy">
+      <div class="bubble-time img-time">${time}</div>
+    </div>`;
+  }
+  if(m.type==="quote"){
+    const statusMap = {
+      pending: '相手の確認待ちです',
+      accepted: '✓ この内容で成立しました',
+      cancelled: '取り消し済みです'
+    };
+    const statusText = statusMap[m.status] || m.status;
+    const showCancel = m.sender==='me' && m.status==='pending';
+    const showReviewForm = m.status==='accepted' && m.sender==='me' && !m.myReviewSubmitted;
+    return `<div class="bubble ${m.sender==='me'?'me':'them'} quote-bubble">
+      <div class="quote-head">📋 見積もりの提案</div>
+      ${m.companyName ? `<div class="quote-line" style="opacity:.85;">依頼元:${escapeHtml(m.companyName)}${m.companyScore!==null && m.companyScore!==undefined ? ` (信用${m.companyScore})` : ''}</div>` : ''}
+      <div class="quote-line">${escapeHtml(m.jobType)}</div>
+      <div class="quote-line mono">¥${m.amount.toLocaleString()}</div>
+      <div class="quote-line">📅 ${escapeHtml(m.date||'日程調整中')}</div>
+      <div class="quote-status ${m.status}">${statusText}</div>
+      ${showCancel ? `<button class="mini-icon-btn" data-cancel-quote="${m.id}" style="margin-top:6px;width:100%;font-size:11px;padding:6px;">この提案を取り消す</button>` : ''}
+      ${showReviewForm ? `
+        <div class="review-box">
+          <div class="quote-line">この案件を評価する</div>
+          <div class="star-picker" data-star-picker="${m.id}" data-current="5">
+            ${[1,2,3,4,5].map(n=>`<button type="button" class="star-btn filled" data-star="${n}" data-star-target="${m.id}">★</button>`).join("")}
+          </div>
+          <textarea id="reviewComment-${m.id}" placeholder="コメント(任意)" style="min-height:50px;margin-top:6px;width:100%;"></textarea>
+          <button class="btn primary" data-submit-review="${m.id}" style="width:100%;margin-top:6px;padding:8px;font-size:12px;">評価を送信する</button>
+        </div>
+      ` : ''}
+      ${m.myReviewSubmitted ? `
+        <div class="review-box">
+          <div class="quote-line">${'⭐'.repeat(m.myReview.rating)}${'☆'.repeat(5-m.myReview.rating)} あなたの評価</div>
+          ${m.myReview.comment ? `<div class="quote-line" style="opacity:.85;">${escapeHtml(m.myReview.comment)}</div>` : ''}
+        </div>
+      ` : ''}
+      ${m.theirReviewSubmitted ? `
+        <div class="review-box">
+          <div class="quote-line">${'⭐'.repeat(m.theirReview.rating)}${'☆'.repeat(5-m.theirReview.rating)} ${escapeHtml(m.performerName||'相手')}さんからの評価</div>
+          ${m.theirReview.comment ? `<div class="quote-line" style="opacity:.85;">${escapeHtml(m.theirReview.comment)}</div>` : ''}
+        </div>
+      ` : ''}
+      <div class="bubble-time">${time}</div>
+    </div>`;
+  }
+  if(m.type==="system"){
+    return `<div class="bubble system">${escapeHtml(m.text)}${time ? `<div class="bubble-time" style="text-align:center;">${time}</div>` : ''}</div>`;
+  }
+  return `<div class="bubble ${m.sender==='me'?'me':'them'}">${escapeHtml(m.text)}<div class="bubble-time">${time}</div></div>`;
+}
+
+function syncFormDraftFromDOM(){
+  const g = id => document.getElementById(id);
+  if(g("fdName")) formDraft.name = g("fdName").value;
+  if(g("fdGenre")) formDraft.genre = g("fdGenre").value;
+  if(g("fdArea")) formDraft.area = g("fdArea").value;
+  if(g("fdBio")) formDraft.bio = g("fdBio").value;
+  if(g("fdVideo")) formDraft.video = g("fdVideo").value;
+  if(g("fdNgOther")) formDraft.ngOther = g("fdNgOther").value;
+  const rows = document.querySelectorAll("[data-jt-row]");
+  if(rows.length){
+    formDraft.jobTypes = Array.from(rows).map(row=>{
+      const idx = row.dataset.jtRow;
+      const name = document.getElementById("jtName"+idx)?.value || "";
+      const price = document.getElementById("jtPrice"+idx)?.value || "";
+      return {name, price};
+    });
+  }
+}
+
+function renderFormModal(root){
+  const areaOpts = AREAS.map(a=>`<option value="${a}" ${formDraft.area===a?'selected':''}>${a}</option>`).join("");
+  root.innerHTML = `
+    <div class="overlay" id="ov">
+      <div class="sheet">
+        <div class="sheet-head">
+          <span class="disp">出演者登録</span>
+          <button class="closeBtn" id="closeForm">×</button>
+        </div>
+        <div class="sheet-body">
+          <div class="note">デモ版のため本人確認書類のアップロードは省略しています。実運用ではここでKYCを行います。</div>
+
+          <label>お名前</label>
+          <input type="text" id="fdName" placeholder="例:山田 花子" value="${escapeHtml(formDraft.name)}">
+
+          <label>区分</label>
+          <select class="full" id="fdGenre">
+            ${GENRES.map(([v,l])=>`<option value="${v}" ${formDraft.genre===v?'selected':''}>${l}</option>`).join("")}
+          </select>
+
+          <label>活動エリア</label>
+          <select class="full" id="fdArea">${areaOpts}</select>
+
+          <label>案件タイプ別の料金</label>
+          <div id="jtRows">
+            ${formDraft.jobTypes.map((j,i)=>`
+              <div class="jt-row" data-jt-row="${i}" style="display:flex;gap:8px;margin-bottom:8px;">
+                <input type="text" id="jtName${i}" placeholder="案件タイプ 例:SNS動画" value="${escapeHtml(j.name)}" style="flex:2;">
+                <input type="number" id="jtPrice${i}" placeholder="金額" value="${j.price}" style="flex:1;">
+                ${formDraft.jobTypes.length>1 ? `<button type="button" class="btn ghost" data-remove-jt="${i}" style="flex:0 0 auto;padding:0 12px;">－</button>` : ''}
+              </div>
+            `).join("")}
+          </div>
+          <button type="button" class="btn ghost" id="addJt" style="width:100%;">＋ 案件タイプを追加</button>
+
+          <label>出演可能な曜日</label>
+          <div class="day-picker" id="dayPicker">
+            ${["月","火","水","木","金","土","日"].map(d=>`<button type="button" class="day-toggle ${formDraft.days.includes(d)?'on':''}" data-day="${d}">${d}</button>`).join("")}
+          </div>
+
+          <label>出演可能な時間帯(複数選択可)</label>
+          <div class="day-picker" id="timePicker">
+            ${TIME_SLOTS.map(t=>`<button type="button" class="day-toggle ${formDraft.timeSlots.includes(t)?'on':''}" data-time="${t}">${t}</button>`).join("")}
+          </div>
+
+          <label>出演NGの条件(複数選択可)</label>
+          <div class="ng-picker" id="ngPicker">
+            ${NG_OPTIONS.map(n=>`
+              <label class="ng-item"><input type="checkbox" data-ng="${escapeHtml(n)}" ${formDraft.ng.includes(n)?'checked':''}> ${n}</label>
+            `).join("")}
+          </div>
+          <label>その他のNG条件(自由記述・任意)</label>
+          <input type="text" id="fdNgOther" placeholder="例:ペットが同席する撮影" value="${escapeHtml(formDraft.ngOther)}">
+
+          <label>自己紹介</label>
+          <textarea id="fdBio" placeholder="経験や得意なジャンルなど">${escapeHtml(formDraft.bio)}</textarea>
+
+          <label>参考動画URL(任意)</label>
+          <input type="text" id="fdVideo" placeholder="https://..." value="${escapeHtml(formDraft.video)}">
+
+          <div class="cta-row">
+            <button class="btn ghost" id="cancelForm">キャンセル</button>
+            <button class="btn primary" id="submitForm">登録する</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("ov").addEventListener("click", e=>{ if(e.target.id==="ov"){ showForm=false; renderModal(); }});
+  document.getElementById("closeForm").addEventListener("click", ()=>{ showForm=false; renderModal(); });
+  document.getElementById("cancelForm").addEventListener("click", ()=>{ showForm=false; renderModal(); });
+
+  document.getElementById("addJt").addEventListener("click", ()=>{
+    syncFormDraftFromDOM();
+    formDraft.jobTypes.push({name:"", price:""});
+    renderFormModal(root);
+  });
+  document.querySelectorAll("[data-remove-jt]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      syncFormDraftFromDOM();
+      const idx = parseInt(btn.dataset.removeJt);
+      formDraft.jobTypes.splice(idx,1);
+      renderFormModal(root);
+    });
+  });
+
+  document.querySelectorAll("[data-day]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const d = btn.dataset.day;
+      if(formDraft.days.includes(d)) formDraft.days = formDraft.days.filter(x=>x!==d);
+      else formDraft.days.push(d);
+      btn.classList.toggle("on");
+    });
+  });
+  document.querySelectorAll("[data-time]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const t = btn.dataset.time;
+      if(formDraft.timeSlots.includes(t)) formDraft.timeSlots = formDraft.timeSlots.filter(x=>x!==t);
+      else formDraft.timeSlots.push(t);
+      btn.classList.toggle("on");
+    });
+  });
+  document.querySelectorAll("[data-ng]").forEach(cb=>{
+    cb.addEventListener("change", ()=>{
+      const n = cb.dataset.ng;
+      if(cb.checked){ if(!formDraft.ng.includes(n)) formDraft.ng.push(n); }
+      else { formDraft.ng = formDraft.ng.filter(x=>x!==n); }
+    });
+  });
+
+  document.getElementById("submitForm").addEventListener("click", async ()=>{
+    syncFormDraftFromDOM();
+    const name = formDraft.name.trim();
+    const genre = formDraft.genre;
+    const area = formDraft.area;
+    const bio = formDraft.bio.trim();
+    const video = formDraft.video.trim();
+    const ngOther = formDraft.ngOther.trim();
+    if(!name){ alert("お名前を入力してください"); return; }
+
+    let jobTypes = formDraft.jobTypes
+      .map(j=>({ name: (j.name||"").trim(), price: parseInt(j.price)||0 }))
+      .filter(j=> j.name && j.price>0);
+    if(!jobTypes.length) jobTypes = [{name:"出演", price:20000}];
+
+    const ngList = [...formDraft.ng];
+    if(ngOther) ngList.push(ngOther);
+
+    const newP = {
+      id: "u"+Date.now(),
+      name, genre, area, jobTypes, bio,
+      ng: ngList, days: [...formDraft.days], timeSlots: [...formDraft.timeSlots], video,
+      completion: 100, delay: 0, reply: 90, totalJobs: 0, bigClient:false,
+      createdAt: Date.now()
+    };
+    profiles.push(newP);
+    await persist();
+    formDraft = { name:"", genre:"model", area:"宮崎", jobTypes:[{name:"",price:""}], bio:"", days:[], timeSlots:[], ng:[], ngOther:"", video:"" };
+    showForm = false;
+    view = "browse";
+    render();
+  });
+}
+
+init();
+</script>
+</body>
+</html>

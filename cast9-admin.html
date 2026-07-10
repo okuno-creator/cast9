@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAST9 管理者コンソール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --stage: #101014;
+    --stage-2: #1A1B22;
+    --stage-3: #23242D;
+    --paper-dim: #C9C5BA;
+    --spotlight: #E8B84B;
+    --spotlight-dim: #7A6432;
+    --signal: #C4453B;
+    --trust: #3F8F63;
+    --ink: #F5F3EE;
+    --muted: #9394A3;
+    --hair: #2E2F38;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--stage);color:var(--ink);font-family:'Zen Kaku Gothic New', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .disp{font-family:'Shippori Mincho', serif;}
+  #app{max-width:560px;margin:0 auto;min-height:100vh;position:relative;}
+
+  header{padding:20px 18px 14px;border-bottom:1px solid var(--hair);}
+  .brand{display:flex;align-items:baseline;gap:8px;}
+  .brand .mark{font-family:'Shippori Mincho',serif;font-weight:800;font-size:20px;color:var(--spotlight);}
+  .brand .sub{font-size:10px;color:var(--signal);letter-spacing:2px;font-family:'JetBrains Mono',monospace;border:1px solid #5a2c28;padding:2px 7px;border-radius:4px;}
+
+  main{padding:16px 16px 60px;}
+
+  .warn-box{background:#241713;border:1px solid #5a2c28;border-radius:10px;padding:12px 14px;font-size:12px;color:var(--paper-dim);line-height:1.6;margin-bottom:20px;}
+
+  .admin-login{max-width:360px;margin:40px auto 0;}
+  .admin-login .disp{font-size:20px;color:var(--paper-dim);margin-bottom:4px;}
+  .sub-note{font-size:12px;color:var(--muted);margin-bottom:20px;}
+  .admin-error{color:var(--signal);font-size:12px;margin-top:8px;min-height:16px;}
+
+  label{display:block;font-size:11px;color:var(--muted);margin:14px 0 5px;font-weight:700;letter-spacing:.4px;}
+  input[type=text]{
+    width:100%;background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;
+    padding:11px 12px;color:var(--ink);font-size:13px;font-family:'Zen Kaku Gothic New',sans-serif;
+  }
+  input[type=text]:focus{outline:2px solid var(--spotlight);}
+
+  .btn{padding:13px;border-radius:10px;border:none;font-weight:800;font-size:13px;cursor:pointer;}
+  .btn.primary{background:var(--spotlight);color:var(--stage);width:100%;margin-top:18px;}
+  .btn.ghost{background:var(--stage-2);color:var(--ink);border:1px solid var(--hair);}
+
+  .admin-tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:16px;}
+  .admin-tabs button{
+    background:var(--stage-2);border:1px solid var(--hair);color:var(--muted);padding:7px 13px;
+    border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;
+  }
+  .admin-tabs button.active{background:var(--spotlight);color:var(--stage);border-color:var(--spotlight);}
+
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .kpi-box{background:var(--stage-2);border:1px solid var(--hair);border-radius:12px;padding:14px;}
+  .kpi-box .num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--spotlight);}
+  .kpi-box .lbl{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  .admin-row{display:flex;align-items:center;gap:10px;background:var(--stage-2);border:1px solid var(--hair);border-radius:12px;padding:12px;margin-bottom:10px;}
+  .avatar{
+    width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Shippori Mincho',serif;font-weight:700;font-size:14px;color:var(--stage);
+  }
+  .admin-row-info{flex:1;min-width:0;}
+  .admin-row-name{font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .admin-row-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .badge-suspended{font-size:10px;background:#4a2321;color:var(--signal);padding:2px 7px;border-radius:8px;font-weight:700;}
+  .badge-candidate{font-size:10px;background:#3a3420;color:var(--spotlight);padding:2px 7px;border-radius:8px;font-weight:700;}
+  .mini-btn{background:var(--stage-3);border:1px solid var(--hair);color:var(--ink);font-size:11px;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .mini-btn.danger{color:var(--signal);border-color:#5a2c28;}
+  .mini-btn.safe{color:var(--trust);border-color:#265a3d;}
+
+  .report-reason{font-size:12px;color:var(--paper-dim);margin-top:4px;line-height:1.5;}
+  .report-status{font-size:10px;padding:2px 8px;border-radius:8px;font-weight:700;}
+  .report-status.未対応{background:#4a2321;color:var(--signal);}
+  .report-status.対応済み{background:#1e3a2a;color:var(--trust);}
+  .report-status.却下{background:#2a2c38;color:var(--muted);}
+
+  .ai-box{background:var(--stage-3);border:1px solid var(--hair);border-radius:10px;padding:10px 12px;margin-top:6px;}
+  .ai-severity{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:8px;margin-bottom:6px;}
+  .ai-severity.軽度{background:#3a3420;color:var(--spotlight);}
+  .ai-severity.重大{background:#4a2321;color:var(--signal);}
+  .ai-severity.情報不足{background:#2a2c38;color:var(--muted);}
+
+  .log-row{font-size:12px;color:var(--paper-dim);border-bottom:1px solid var(--hair);padding:9px 2px;}
+  .log-row .log-ts{color:var(--muted);font-size:10px;font-family:'JetBrains Mono',monospace;margin-right:8px;}
+  .admin-search{width:100%;background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;padding:10px 12px;color:var(--ink);font-size:13px;margin-bottom:14px;}
+  .empty{text-align:center;padding:50px 20px;color:var(--muted);}
+  .empty .disp{font-size:17px;color:var(--paper-dim);margin-bottom:6px;}
+
+  .logout-btn{background:none;border:1px solid var(--hair);color:var(--muted);font-size:11px;padding:5px 10px;border-radius:14px;cursor:pointer;float:right;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const AVATAR_COLORS = ["#E8B84B","#9FC1F0","#E4A9EE","#9FE0B5","#F0A98D","#B7A9F0"];
+const MINOR_VIOLATION_THRESHOLD = 3;
+const REPORTS_SEED = [
+  {id:"r1", targetId:"s2", targetName:"黒木 蓮", reason:"当日連絡なしでの遅刻", reporterType:"依頼者", status:"未対応", createdAt: Date.now()-1000*60*60*24*3, evidence:[], notes:[], resolutionNote:""},
+  {id:"r2", targetId:"s4", targetName:"藤堂 かれん", reason:"NG条件外の内容を撮影中に依頼された", reporterType:"出演者", status:"未対応", createdAt: Date.now()-1000*60*60*24*1, evidence:[], notes:[], resolutionNote:""},
+];
+
+let profiles = [];
+let chats = {};
+let reports = [];
+let adminLogs = [];
+let imageQueue = [];
+let companies = [];
+
+let authed = false;
+let loginError = "";
+let tab = "overview"; // overview | users | reports | logs
+let search = "";
+let selectedReportId = null;
+
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function initials(name){ return (name||"?").trim().slice(0,1); }
+function avatarColor(id){
+  let h=0; for(const c of id) h+=c.charCodeAt(0);
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function trustScore(p){
+  const base = Math.round((p.completion||0)*0.5 + (100-(p.delay||0))*0.2 + (p.reply||0)*0.1);
+  return Math.max(0, base - (p.penaltyPoints||0));
+}
+function companyTrustScore(c){
+  const base = Math.round((c.completion||0)*0.5 + (100-(c.delay||0))*0.2 + (c.reply||0)*0.1);
+  return Math.max(0, base - (c.penaltyPoints||0));
+}
+
+async function loadAll(){
+  try{
+    if(window.storage){
+      const p = await window.storage.get("cast9_profiles", true).catch(()=>null);
+      profiles = p ? JSON.parse(p.value) : [];
+      const c = await window.storage.get("cast9_chats", true).catch(()=>null);
+      chats = c ? JSON.parse(c.value) : {};
+      const r = await window.storage.get("cast9_reports", true).catch(()=>null);
+      reports = r ? JSON.parse(r.value) : REPORTS_SEED;
+      reports.forEach(rep=>{
+        if(!rep.evidence) rep.evidence = [];
+        if(!rep.notes) rep.notes = [];
+        if(rep.resolutionNote===undefined) rep.resolutionNote = "";
+      });
+      const l = await window.storage.get("cast9_adminlogs", true).catch(()=>null);
+      adminLogs = l ? JSON.parse(l.value) : [];
+      const q = await window.storage.get("cast9_imagequeue", true).catch(()=>null);
+      imageQueue = q ? JSON.parse(q.value) : [];
+      const co = await window.storage.get("cast9_companies", true).catch(()=>null);
+      companies = co ? JSON.parse(co.value) : [];
+    }
+  }catch(e){}
+}
+
+async function persist(){
+  try{
+    if(window.storage){
+      await window.storage.set("cast9_profiles", JSON.stringify(profiles), true).catch(()=>{});
+      await window.storage.set("cast9_chats", JSON.stringify(chats), true).catch(()=>{});
+      await window.storage.set("cast9_reports", JSON.stringify(reports), true).catch(()=>{});
+      await window.storage.set("cast9_adminlogs", JSON.stringify(adminLogs), true).catch(()=>{});
+      await window.storage.set("cast9_imagequeue", JSON.stringify(imageQueue), true).catch(()=>{});
+      await window.storage.set("cast9_companies", JSON.stringify(companies), true).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+function logAction(text){
+  adminLogs.unshift({text, ts:Date.now()});
+  if(adminLogs.length>200) adminLogs.length=200;
+}
+
+function renderReportRow(r){
+  const open = selectedReportId === r.id;
+  return `
+    <div class="admin-row" style="align-items:flex-start;flex-direction:column;">
+      <div style="display:flex;width:100%;align-items:flex-start;gap:10px;cursor:pointer;" data-toggle-report="${r.id}">
+        <div class="admin-row-info">
+          <div class="admin-row-name">${escapeHtml(r.targetName)} <span class="report-status ${r.status}">${r.status}</span></div>
+          <div class="report-reason">通報者:${r.reporterType} ・ ${escapeHtml(r.reason)}</div>
+          <div class="report-reason" style="color:var(--muted);">${new Date(r.createdAt).toLocaleDateString('ja-JP')}</div>
+        </div>
+        <span style="color:var(--muted);font-size:12px;">${open?'閉じる ▲':'調査する ▼'}</span>
+      </div>
+      ${open ? renderReportDetail(r) : ''}
+    </div>
+  `;
+}
+
+function renderReportDetail(r){
+  const ai = r.aiSuggestion;
+  return `
+    <div style="width:100%;margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);">
+      <label>証拠リンク(チャットの該当箇所URL、参考動画など)</label>
+      ${r.evidence.length ? r.evidence.map(e=>`<div class="report-reason">・${escapeHtml(e)}</div>`).join("") : `<div class="report-reason" style="color:var(--muted);">まだ登録されていません</div>`}
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input type="text" id="evInput-${r.id}" placeholder="https://..." style="flex:1;">
+        <button class="mini-btn" data-add-evidence="${r.id}" style="flex:0 0 auto;">追加</button>
+      </div>
+
+      <label>調査ノート(事実確認の記録)</label>
+      ${r.notes.length ? r.notes.map(n=>`<div class="log-row"><span class="log-ts">${new Date(n.ts).toLocaleString('ja-JP')}</span>${escapeHtml(n.text)}</div>`).join("") : `<div class="report-reason" style="color:var(--muted);">まだ記録がありません</div>`}
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input type="text" id="noteInput-${r.id}" placeholder="例:対象者に確認したところ、当日は事前連絡があったとのこと" style="flex:1;">
+        <button class="mini-btn" data-add-note="${r.id}" style="flex:0 0 auto;">記録する</button>
+      </div>
+
+      <label>AIによる参考判定</label>
+      ${ai ? `
+        <div class="ai-box">
+          <div class="ai-severity ${ai.severity}">${escapeHtml(ai.severity)}</div>
+          <div class="report-reason">${escapeHtml(ai.summary||"")}</div>
+          <div class="report-reason" style="color:var(--muted);">${escapeHtml(ai.reasoning||"")}</div>
+        </div>
+      ` : `<div class="report-reason" style="color:var(--muted);">まだ分析していません</div>`}
+      <button class="mini-btn" data-ai-analyze="${r.id}" style="width:100%;margin-top:8px;" ${r.aiLoading?'disabled':''}>${r.aiLoading ? '分析中...' : '🤖 AIで内容を分析(参考情報・最終判断は人が行います)'}</button>
+
+      ${r.status==="未対応" ? `
+      <label>判定(理由を必ず記入してください)</label>
+      <input type="text" id="reasonInput-${r.id}" placeholder="判定理由を入力">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        <button class="mini-btn danger" data-decide="${r.id}" data-verdict="却下" style="width:100%;">却下する(誤報)</button>
+        <button class="mini-btn" data-decide="${r.id}" data-verdict="軽度" style="width:100%;">軽度の問題として処理(信用スコアを下げる)</button>
+        <button class="mini-btn danger" data-decide="${r.id}" data-verdict="重大" style="width:100%;background:#4a2321;">重大・悪質な違反としてBANする</button>
+      </div>
+      ` : `
+      <label>判定結果</label>
+      <div class="report-reason">${r.severity ? `【${escapeHtml(r.severity)}】` : ''}${escapeHtml(r.resolutionNote || "(記録なし)")}</div>
+      `}
+    </div>
+  `;
+}
+
+function attachReportHandlers(){
+  document.querySelectorAll("[data-toggle-report]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.toggleReport;
+      selectedReportId = selectedReportId===id ? null : id;
+      renderDashboard();
+    });
+  });
+  document.querySelectorAll("[data-add-evidence]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const r = reports.find(x=>x.id===btn.dataset.addEvidence);
+      const input = document.getElementById("evInput-"+r.id);
+      const val = input.value.trim();
+      if(!val) return;
+      r.evidence.push(val);
+      logAction(`通報「${r.targetName}」に証拠リンクを追加しました`);
+      await persist();
+      renderDashboard();
+    });
+  });
+  document.querySelectorAll("[data-add-note]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const r = reports.find(x=>x.id===btn.dataset.addNote);
+      const input = document.getElementById("noteInput-"+r.id);
+      const val = input.value.trim();
+      if(!val) return;
+      r.notes.push({text:val, ts:Date.now()});
+      logAction(`通報「${r.targetName}」に調査ノートを記録しました`);
+      await persist();
+      renderDashboard();
+    });
+  });
+  document.querySelectorAll("[data-decide]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const r = reports.find(x=>x.id===btn.dataset.decide);
+      const verdict = btn.dataset.verdict;
+      const reasonInput = document.getElementById("reasonInput-"+r.id);
+      const reason = reasonInput.value.trim();
+      if(!reason){ alert("判定理由を入力してください"); return; }
+
+      const target = profiles.find(x=>x.id===r.targetId);
+
+      if(verdict==="却下"){
+        r.status = "却下";
+        r.resolutionNote = reason;
+        logAction(`通報「${r.targetName} / ${r.reason}」を却下(誤報)としました(理由:${reason})`);
+      } else if(verdict==="軽度"){
+        r.status = "対応済み";
+        r.severity = "軽度";
+        r.resolutionNote = reason;
+        if(target){
+          target.penaltyPoints = (target.penaltyPoints||0) + 15;
+          target.minorViolationCount = (target.minorViolationCount||0) + 1;
+          if(target.minorViolationCount >= MINOR_VIOLATION_THRESHOLD && !target.suspended && !target.banCandidate){
+            target.banCandidate = true;
+            logAction(`${target.name} が軽度違反${target.minorViolationCount}回目に達したため、BAN候補としてフラグが立ちました(要レビュー)`);
+          }
+        }
+        logAction(`通報「${r.targetName} / ${r.reason}」を軽度の問題として処理し、信用スコアにペナルティを適用しました(理由:${reason})`);
+      } else if(verdict==="重大"){
+        r.status = "対応済み";
+        r.severity = "重大";
+        r.resolutionNote = reason;
+        if(target){ target.suspended = true; target.banReason = reason; }
+        logAction(`通報「${r.targetName} / ${r.reason}」を重大な違反と判定し、対象者をBANしました(理由:${reason})`);
+      }
+      await persist();
+      renderDashboard();
+    });
+  });
+
+  document.querySelectorAll("[data-ai-analyze]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const r = reports.find(x=>x.id===btn.dataset.aiAnalyze);
+      r.aiLoading = true;
+      renderDashboard();
+      await aiAnalyzeReport(r);
+      r.aiLoading = false;
+      await persist();
+      renderDashboard();
+    });
+  });
+}
+
+async function aiAnalyzeReport(r){
+  const prompt = `あなたは出演者キャスティングマッチングサービスの通報内容を一次仕分けするアシスタントです。以下の通報について、悪質度の参考判定をしてください。最終判断は必ず人間の管理者が行うため、あなたは判断材料の提示のみを行います。
+
+通報理由: ${r.reason}
+通報者区分: ${r.reporterType}
+これまでの調査ノート: ${r.notes.length ? r.notes.map(n=>n.text).join(" / ") : "なし"}
+証拠リンク件数: ${r.evidence.length}件
+
+以下のJSON形式のみで回答してください。前置きや説明文、Markdownのコードブロック記法は一切不要です。
+{"severity": "軽度" または "重大" または "情報不足", "summary": "20文字程度の要約", "reasoning": "40文字程度の判断理由"}`;
+
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 300,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const text = (data.content||[]).map(b=>b.text||"").join("");
+    const clean = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    r.aiSuggestion = parsed;
+  }catch(e){
+    r.aiSuggestion = { severity:"情報不足", summary:"AI分析に失敗しました", reasoning:"通信エラーまたは応答形式の不一致" };
+  }
+}
+
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <header>
+      <div class="brand">
+        <span class="mark">CAST9</span>
+        <span class="sub">ADMIN CONSOLE</span>
+        ${authed ? '<button class="logout-btn" id="logoutBtn">ログアウト</button>' : ''}
+      </div>
+    </header>
+    <main id="main"></main>
+  `;
+  if(authed){
+    document.getElementById("logoutBtn").addEventListener("click", ()=>{
+      logAction("管理者がログアウトしました");
+      persist();
+      authed = false;
+      render();
+    });
+  }
+  if(!authed) renderLogin();
+  else renderDashboard();
+}
+
+function renderLogin(){
+  const main = document.getElementById("main");
+  main.innerHTML = `
+    <div class="warn-box">このページは運用担当者専用です。一般利用者向けアプリ(CAST9)からはリンクされていません。URLを第三者と共有しないでください。</div>
+    <div class="admin-login">
+      <div class="disp">管理者ログイン</div>
+      <div class="sub-note">二段階認証が必須です。</div>
+      <label>管理者パスワード</label>
+      <input type="text" id="pw" placeholder="パスワードを入力">
+      <label>認証コード(6桁)</label>
+      <input type="text" id="code" placeholder="デモ用コード:123456" maxlength="6">
+      <div class="admin-error" id="err">${loginError ? escapeHtml(loginError) : ''}</div>
+      <button class="btn primary" id="loginBtn">ログイン</button>
+      <div class="warn-box" style="margin-top:20px;">デモ版のためパスワードは何でも通ります。認証コードは "123456" のみ有効です(二段階認証の擬似体験用)。実運用では認証アプリ連携・IPアドレス制限・不審ログイン検知も必須です。</div>
+    </div>
+  `;
+  document.getElementById("loginBtn").addEventListener("click", async ()=>{
+    const pw = document.getElementById("pw").value;
+    const code = document.getElementById("code").value.trim();
+    if(!pw){ loginError="パスワードを入力してください"; renderLogin(); return; }
+    if(code!=="123456"){ loginError="認証コードが正しくありません"; renderLogin(); return; }
+    loginError="";
+    authed = true;
+    await loadAll();
+    logAction("管理者がログインしました");
+    await persist();
+    render();
+  });
+}
+
+function renderDashboard(){
+  const main = document.getElementById("main");
+  const tabs = [["overview","概要"],["users","出演者管理"],["companies","依頼企業管理"],["reports","通報対応"],["moderation","画像モデレーション"],["logs","操作ログ"]];
+  main.innerHTML = `
+    <div class="admin-tabs">${tabs.map(([v,l])=>`<button data-t="${v}" class="${tab===v?'active':''}">${l}</button>`).join("")}</div>
+    <div id="body"></div>
+  `;
+  document.querySelectorAll("[data-t]").forEach(b=>{
+    b.addEventListener("click", ()=>{ tab=b.dataset.t; renderDashboard(); });
+  });
+  const body = document.getElementById("body");
+
+  if(tab==="overview"){
+    const totalJobs = profiles.reduce((s,p)=>s+(p.totalJobs||0),0);
+    const pendingQuotes = Object.values(chats).flat().filter(m=>m.type==="quote" && m.status==="pending").length;
+    const openReports = reports.filter(r=>r.status==="未対応").length;
+    const banCandidates = profiles.filter(p=>p.banCandidate && !p.suspended).length;
+    const pendingImages = imageQueue.filter(q=>q.status==="pending").length;
+    body.innerHTML = `
+      <div class="kpi-grid">
+        <div class="kpi-box"><div class="num">${profiles.length}</div><div class="lbl">登録出演者数</div></div>
+        <div class="kpi-box"><div class="num">${companies.length}</div><div class="lbl">登録企業数</div></div>
+        <div class="kpi-box"><div class="num">${totalJobs}</div><div class="lbl">累計成立案件数</div></div>
+        <div class="kpi-box"><div class="num">${pendingQuotes}</div><div class="lbl">承諾待ちの見積もり</div></div>
+        <div class="kpi-box"><div class="num">${openReports}</div><div class="lbl">未対応の通報</div></div>
+        <div class="kpi-box"><div class="num">${pendingImages}</div><div class="lbl">画像の審査待ち</div></div>
+      </div>
+      ${banCandidates ? `<div class="warn-box" style="border-color:#5a2c28;color:var(--signal);">⚠ BAN候補として要レビューの出演者が ${banCandidates} 名います。「出演者管理」タブで確認してください。</div>` : ''}
+      <div class="warn-box">実運用では、ここに売上・手数料収益・地域別稼働率などの経営指標も表示します。</div>
+    `;
+  }
+
+  if(tab==="users"){
+    body.innerHTML = `
+      <input type="text" class="admin-search" id="searchInput" placeholder="名前で検索..." value="${escapeHtml(search)}">
+      <div id="userList"></div>
+    `;
+    document.getElementById("searchInput").addEventListener("input", e=>{ search=e.target.value; renderUserList(); });
+    renderUserList();
+  }
+
+  if(tab==="companies"){
+    body.innerHTML = companies.length ? companies.map(c=>`
+      <div class="admin-row">
+        <div class="avatar" style="background:${avatarColor(c.id)}">🏢</div>
+        <div class="admin-row-info">
+          <div class="admin-row-name">${c.type==='individual'?'👤':'🏢'} ${escapeHtml(c.name)} ${c.suspended ? '<span class="badge-suspended">BAN中</span>' : ''}</div>
+          <div class="admin-row-sub">${c.type==='individual' ? '個人' : escapeHtml(c.industry||"企業")} ・ ${escapeHtml(c.area||"")} ・ 信用${companyTrustScore(c)} ・ 依頼実績${c.totalJobs||0}件</div>
+          ${c.suspended && c.banReason ? `<div class="report-reason" style="color:var(--signal);">BAN理由:${escapeHtml(c.banReason)}</div>` : ''}
+        </div>
+        <button class="mini-btn ${c.suspended?'safe':'danger'}" data-toggle-company="${c.id}">${c.suspended?'復帰させる':'BANする'}</button>
+      </div>
+    `).join("") : `<div class="empty"><div class="disp">登録されている企業がありません</div></div>`;
+    document.querySelectorAll("[data-toggle-company]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const c = companies.find(x=>x.id===btn.dataset.toggleCompany);
+        if(!c) return;
+        if(c.suspended){
+          const reason = window.prompt("復帰させる理由を入力してください");
+          if(reason===null || !reason.trim()) return;
+          c.suspended = false; c.banReason = "";
+          logAction(`企業「${c.name}」を復帰させました(理由:${reason.trim()})`);
+        } else {
+          const reason = window.prompt("BANする理由を入力してください");
+          if(reason===null || !reason.trim()) return;
+          c.suspended = true; c.banReason = reason.trim();
+          logAction(`企業「${c.name}」をBANしました(理由:${reason.trim()})`);
+        }
+        await persist();
+        renderDashboard();
+      });
+    });
+  }
+
+  if(tab==="reports"){
+    body.innerHTML = reports.length ? reports.map(r=>renderReportRow(r)).join("") : `<div class="empty"><div class="disp">通報はありません</div></div>`;
+    attachReportHandlers();
+  }
+
+  if(tab==="moderation"){
+    const pending = imageQueue.filter(q=>q.status==="pending");
+    body.innerHTML = pending.length ? pending.map(q=>`
+      <div class="admin-row" style="flex-direction:column;align-items:flex-start;">
+        <img src="${q.dataUrl}" style="max-width:180px;max-height:220px;border-radius:8px;margin-bottom:8px;object-fit:cover;">
+        <div class="report-reason">AIの判定理由:${escapeHtml(q.reason||"(なし)")}</div>
+        <div class="report-reason" style="color:var(--muted);">${new Date(q.ts).toLocaleString('ja-JP')}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;width:100%;">
+          <button class="mini-btn safe" data-mod-ok="${q.id}" style="flex:1;">問題なし(公開を継続)</button>
+          <button class="mini-btn danger" data-mod-remove="${q.id}" style="flex:1;">削除する</button>
+        </div>
+      </div>
+    `).join("") : `<div class="empty"><div class="disp">審査待ちの画像はありません</div></div>`;
+    document.querySelectorAll("[data-mod-ok]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const q = imageQueue.find(x=>x.id===btn.dataset.modOk);
+        if(q){ q.status="resolved_ok"; logAction("画像モデレーション:問題なしと判断し公開を継続しました"); }
+        await persist();
+        renderDashboard();
+      });
+    });
+    document.querySelectorAll("[data-mod-remove]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const q = imageQueue.find(x=>x.id===btn.dataset.modRemove);
+        if(q){
+          q.status="resolved_removed";
+          const log = chats[q.chatId];
+          if(log){
+            const msg = log.find(m=>m.id===q.id);
+            if(msg){ msg.type="system"; msg.text="この画像は運営により削除されました"; delete msg.dataUrl; }
+          }
+          logAction("画像モデレーション:不適切と判断し画像を削除しました");
+        }
+        await persist();
+        renderDashboard();
+      });
+    });
+  }
+
+  if(tab==="logs"){
+    body.innerHTML = adminLogs.length ? adminLogs.map(l=>`
+      <div class="log-row"><span class="log-ts">${new Date(l.ts).toLocaleString('ja-JP')}</span>${escapeHtml(l.text)}</div>
+    `).join("") : `<div class="empty"><div class="disp">操作ログはまだありません</div></div>`;
+  }
+
+  function renderUserList(){
+    const list = document.getElementById("userList");
+    if(!list) return;
+    const filtered = profiles.filter(p=>(p.name||"").includes(search));
+    filtered.sort((a,b)=> (b.banCandidate?1:0) - (a.banCandidate?1:0));
+    list.innerHTML = filtered.length ? filtered.map(p=>`
+      <div class="admin-row" style="${p.banCandidate && !p.suspended ? 'border-color:#5a2c28;' : ''}">
+        <div class="avatar" style="background:${avatarColor(p.id)}">${initials(p.name)}</div>
+        <div class="admin-row-info">
+          <div class="admin-row-name">
+            ${escapeHtml(p.name)}
+            ${p.suspended ? '<span class="badge-suspended">BAN中</span>' : ''}
+            ${p.banCandidate && !p.suspended ? '<span class="badge-candidate">⚠ BAN候補・要レビュー</span>' : ''}
+          </div>
+          <div class="admin-row-sub">${escapeHtml(p.area||"")} ・ 信用${trustScore(p)}${p.penaltyPoints ? ` (ペナルティ-${p.penaltyPoints})` : ''} ・ 稼働${p.totalJobs||0}件 ・ 軽度違反${p.minorViolationCount||0}回</div>
+          ${p.suspended && p.banReason ? `<div class="report-reason" style="color:var(--signal);">BAN理由:${escapeHtml(p.banReason)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${p.banCandidate && !p.suspended ? `
+            <button class="mini-btn danger" data-review-ban="${p.id}">BANする</button>
+            <button class="mini-btn safe" data-review-clear="${p.id}">様子見にする</button>
+          ` : `<button class="mini-btn ${p.suspended?'safe':'danger'}" data-toggle="${p.id}">${p.suspended?'復帰申請を審査':'BANする'}</button>`}
+        </div>
+      </div>
+    `).join("") : `<div class="empty"><div class="disp">該当する出演者がいません</div></div>`;
+
+    list.querySelectorAll("[data-review-ban]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const p = profiles.find(x=>x.id===btn.dataset.reviewBan);
+        const reason = window.prompt("BANする理由を入力してください");
+        if(reason===null || !reason.trim()) return;
+        p.suspended = true;
+        p.banReason = reason.trim();
+        p.banCandidate = false;
+        logAction(`BAN候補としてフラグが立っていた ${p.name} をレビューの結果BANしました(理由:${reason.trim()})`);
+        await persist();
+        renderUserList();
+      });
+    });
+    list.querySelectorAll("[data-review-clear]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const p = profiles.find(x=>x.id===btn.dataset.reviewClear);
+        const reason = window.prompt("様子見にする理由を入力してください(例:個々の違反は軽微で、パターンとして悪質性は認められない)");
+        if(reason===null || !reason.trim()) return;
+        p.banCandidate = false;
+        p.minorViolationCount = 0;
+        logAction(`BAN候補だった ${p.name} をレビューの結果、様子見にしました(理由:${reason.trim()})`);
+        await persist();
+        renderUserList();
+      });
+    });
+    list.querySelectorAll("[data-toggle]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const p = profiles.find(x=>x.id===btn.dataset.toggle);
+        if(!p) return;
+        if(p.suspended){
+          const reason = window.prompt("復帰させる理由を入力してください(例:メールでの復帰申請を確認し、誤報と判断)");
+          if(reason===null || !reason.trim()) return;
+          p.suspended = false;
+          p.banReason = "";
+          logAction(`${p.name} を復帰させました(理由:${reason.trim()})`);
+        } else {
+          const reason = window.prompt("BANする理由を入力してください");
+          if(reason===null || !reason.trim()) return;
+          p.suspended = true;
+          p.banReason = reason.trim();
+          logAction(`${p.name} をBANしました(理由:${reason.trim()})`);
+        }
+        await persist();
+        renderUserList();
+      });
+    });
+  }
+}
+
+render();
+</script>
+</body>
+</html>
