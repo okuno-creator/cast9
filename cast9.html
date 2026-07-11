@@ -6,6 +6,7 @@
 <title>CAST9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
     --stage: #14141A;
@@ -197,7 +198,7 @@
 
   /* Form */
   label{display:block;font-size:11px;color:var(--muted);margin:12px 0 5px;font-weight:700;letter-spacing:.4px;}
-  input[type=text], input[type=number], textarea, select.full{
+  input[type=text], input[type=number], input[type=email], input[type=password], textarea, select.full{
     width:100%;background:var(--stage-2);border:1px solid var(--hair);border-radius:10px;
     padding:11px 12px;color:var(--ink);font-size:13px;font-family:'Zen Kaku Gothic New',sans-serif;
   }
@@ -232,6 +233,20 @@
   .rank-score{font-family:'JetBrains Mono',monospace;color:var(--spotlight);font-weight:700;font-size:14px;}
 
   .note{font-size:11px;color:var(--muted);background:var(--stage-2);border:1px dashed var(--hair);border-radius:10px;padding:10px 12px;margin-bottom:14px;line-height:1.6;}
+
+  /* Auth */
+  .auth-wrap{max-width:380px;margin:0 auto;padding:36px 4px 60px;}
+  .auth-wrap .disp{font-size:21px;color:var(--paper);margin-bottom:4px;}
+  .auth-lead{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:22px;}
+  .auth-tabs{display:flex;gap:6px;margin-bottom:18px;}
+  .auth-tabs button{
+    flex:1;background:var(--stage-2);border:1px solid var(--hair);color:var(--muted);padding:9px 0;
+    border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;
+  }
+  .auth-tabs button.active{background:var(--spotlight);color:var(--stage);border-color:var(--spotlight);}
+  .auth-error{color:var(--signal);font-size:12px;margin-top:10px;min-height:16px;line-height:1.6;}
+  .auth-info{color:var(--trust);font-size:12px;margin-top:10px;min-height:16px;line-height:1.6;}
+  .auth-bar-name{color:var(--spotlight);font-weight:700;}
 </style>
 </head>
 <body>
@@ -243,6 +258,24 @@ const GENRES = [["model","モデル"],["actor","俳優"],["beginner","未経験"
 const NG_OPTIONS = ["水着・肌の露出が多い案件","政治・宗教色の強い案件","過去にトラブルのあった依頼者","深夜帯(22時以降)の撮影"];
 const TIME_SLOTS = ["早朝(6-9時)","午前(9-12時)","午後(12-17時)","夕方(17-19時)","夜(19-22時)","深夜(22時以降)"];
 const AVATAR_COLORS = ["#E8B84B","#9FC1F0","#E4A9EE","#9FE0B5","#F0A98D","#B7A9F0"];
+
+// ===== Supabase 設定 =====
+// Supabaseダッシュボードの Settings → API の値を貼り付けてください。
+// 未設定の間は従来どおりのデモモード(ブラウザ内ストレージ)で動作します。
+const SUPABASE_CONFIG = {
+  url: "",      // 例: "https://xxxx.supabase.co"
+  anonKey: ""   // 例: "eyJhbGciOi..."(anon public キー。service_roleキーは絶対に書かないこと)
+};
+const sb = (SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey && window.supabase)
+  ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
+  : null;
+
+// 認証状態
+let authUser = null;        // Supabase Authのユーザー(未ログインならnull)
+let authAccount = null;     // {kind:"performer"|"requester", row:{...}} プロフィール未登録ならnull
+let authView = "login";     // login | signup
+let authRole = "performer"; // 新規登録時に選ぶロール
+let authBusy = false;
 
 const SEED = [
   {id:"s1", name:"三上 ひなた", genre:"model", area:"宮崎",
@@ -296,6 +329,27 @@ let rankTab = "total";
 let formDraft = { name:"", genre:"model", area:"宮崎", jobTypes:[{name:"",price:""}], bio:"", days:[], timeSlots:[], ng:[], ngOther:"", video:"" };
 
 async function init(){
+  if(sb){
+    try{
+      const { data: { session } } = await sb.auth.getSession();
+      authUser = session ? session.user : null;
+      if(authUser) await loadAuthAccount();
+    }catch(e){}
+    // メール確認リンクからの戻り(SIGNED_IN)とログアウトを拾う
+    sb.auth.onAuthStateChange(async (event, session)=>{
+      if(event === "SIGNED_IN" && session && (!authUser || authUser.id !== session.user.id)){
+        authUser = session.user;
+        await loadAuthAccount();
+        render();
+      }
+      if(event === "SIGNED_OUT"){
+        authUser = null;
+        authAccount = null;
+        render();
+      }
+    });
+  }
+
   // storage可否チェック(artifact外プレビュー等で失敗しても動くようにフォールバック)
   let stored = null;
   try{
@@ -362,6 +416,230 @@ async function persistCurrentCompany(){
       await window.storage.set("cast9_current_company", currentCompanyId, false).catch(()=>{});
     }
   }catch(e){}
+}
+
+// ===== 認証(Supabase Auth) =====
+
+async function loadAuthAccount(){
+  authAccount = null;
+  if(!sb || !authUser) return;
+  try{
+    const { data: perf } = await sb.from("performers").select("*").eq("user_id", authUser.id).maybeSingle();
+    if(perf){ authAccount = { kind:"performer", row: perf }; return; }
+    const { data: req } = await sb.from("requesters").select("*").eq("user_id", authUser.id).maybeSingle();
+    if(req){ authAccount = { kind:"requester", row: req }; return; }
+  }catch(e){}
+}
+
+function authErrorJa(error){
+  const m = (error && error.message) || "";
+  if(m.includes("Invalid login credentials")) return "メールアドレスまたはパスワードが正しくありません";
+  if(m.includes("already registered") || m.includes("already been registered")) return "このメールアドレスは既に登録されています。ログインしてください";
+  if(m.includes("at least 6 characters")) return "パスワードは6文字以上にしてください";
+  if(m.includes("valid email") || m.includes("invalid format")) return "メールアドレスの形式が正しくありません";
+  if(m.includes("Email not confirmed")) return "メールアドレスが未確認です。届いている確認メールのリンクを開いてから、もう一度ログインしてください";
+  if(m.includes("For security purposes")) return "操作が連続しています。少し待ってからもう一度お試しください";
+  return m ? `エラー:${m}` : "エラーが発生しました。時間をおいてお試しください";
+}
+
+function renderAuthGate(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <header>
+      <div class="brand"><span class="mark">CAST9</span><span class="sub">九州キャスティング・マッチング</span></div>
+    </header>
+    <main id="authMain"></main>
+  `;
+  if(!authUser) renderAuthScreen();
+  else renderProfileSetup();
+}
+
+function renderAuthScreen(){
+  const main = document.getElementById("authMain");
+  const isLogin = authView === "login";
+  main.innerHTML = `
+    <div class="auth-wrap">
+      <div class="disp">${isLogin ? 'おかえりなさい' : 'はじめまして'}</div>
+      <div class="auth-lead">CAST9は九州の出演者と依頼者をつなぐ会員制マッチングサービスです。${isLogin ? 'アカウントにログインしてください。' : 'メールアドレスでアカウントを作成できます。'}</div>
+      <div class="auth-tabs">
+        <button class="${isLogin?'active':''}" data-auth-view="login">ログイン</button>
+        <button class="${!isLogin?'active':''}" data-auth-view="signup">新規登録</button>
+      </div>
+      ${!isLogin ? `
+        <label>登録の種類</label>
+        <div class="day-picker">
+          <button type="button" class="day-toggle ${authRole==='performer'?'on':''}" data-auth-role="performer">🎬 出演者として登録</button>
+          <button type="button" class="day-toggle ${authRole==='requester'?'on':''}" data-auth-role="requester">🏢 依頼者として登録</button>
+        </div>
+      ` : ''}
+      <label>メールアドレス</label>
+      <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+      <label>パスワード${!isLogin ? '(6文字以上)' : ''}</label>
+      <input type="password" id="authPassword" placeholder="パスワード" autocomplete="${isLogin?'current-password':'new-password'}">
+      <div class="auth-error" id="authError"></div>
+      <div class="auth-info" id="authInfo"></div>
+      <button class="btn primary" id="authSubmit" style="width:100%;margin-top:8px;">${isLogin ? 'ログイン' : '登録メールを送信'}</button>
+      ${!isLogin ? `<div class="note" style="margin-top:14px;">登録後、確認メールが届きます。メール内のリンクを開いて本人確認を完了してください。プロフィール(名前・エリアなど)はログイン後に登録します。</div>` : ''}
+    </div>
+  `;
+  document.querySelectorAll("[data-auth-view]").forEach(b=>{
+    b.addEventListener("click", ()=>{ authView = b.dataset.authView; renderAuthScreen(); });
+  });
+  document.querySelectorAll("[data-auth-role]").forEach(b=>{
+    b.addEventListener("click", ()=>{ authRole = b.dataset.authRole; renderAuthScreen(); });
+  });
+
+  const submit = async ()=>{
+    if(authBusy) return;
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    const errEl = document.getElementById("authError");
+    const infoEl = document.getElementById("authInfo");
+    errEl.textContent = ""; infoEl.textContent = "";
+    if(!email){ errEl.textContent = "メールアドレスを入力してください"; return; }
+    if(!password){ errEl.textContent = "パスワードを入力してください"; return; }
+    authBusy = true;
+    const btn = document.getElementById("authSubmit");
+    btn.disabled = true; btn.textContent = "通信中...";
+    try{
+      if(authView === "signup"){
+        const { data, error } = await sb.auth.signUp({
+          email, password,
+          options: { data: { desired_role: authRole } }
+        });
+        if(error){ errEl.textContent = authErrorJa(error); return; }
+        if(data.session){
+          // メール確認が無効な環境では即ログインになる
+          authUser = data.user;
+          await loadAuthAccount();
+          render();
+          return;
+        }
+        infoEl.textContent = "確認メールを送信しました。メール内のリンクを開いて本人確認を完了したあと、この画面からログインしてください。";
+      } else {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if(error){ errEl.textContent = authErrorJa(error); return; }
+        authUser = data.user;
+        await loadAuthAccount();
+        render();
+      }
+    }catch(e){
+      errEl.textContent = "通信に失敗しました。ネットワークを確認してください";
+    }finally{
+      authBusy = false;
+      const btn2 = document.getElementById("authSubmit");
+      if(btn2){ btn2.disabled = false; btn2.textContent = authView === "login" ? "ログイン" : "登録メールを送信"; }
+    }
+  };
+  document.getElementById("authSubmit").addEventListener("click", submit);
+  document.getElementById("authPassword").addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+}
+
+function renderProfileSetup(){
+  const main = document.getElementById("authMain");
+  // サインアップ時に選んだロールを初期値にする
+  const desired = authUser.user_metadata && authUser.user_metadata.desired_role;
+  if(desired === "performer" || desired === "requester"){
+    if(!main.dataset.roleTouched) authRole = desired;
+  }
+  const isPerformer = authRole === "performer";
+  const areaOpts = AREAS.map(a=>`<option value="${a}">${a}</option>`).join("");
+  main.innerHTML = `
+    <div class="auth-wrap">
+      <div class="disp">プロフィール登録</div>
+      <div class="auth-lead">本人確認が完了しました。CAST9でのプロフィールを登録してください(あとから編集できます)。</div>
+      <label>利用の種類</label>
+      <div class="day-picker">
+        <button type="button" class="day-toggle ${isPerformer?'on':''}" data-setup-role="performer">🎬 出演者</button>
+        <button type="button" class="day-toggle ${!isPerformer?'on':''}" data-setup-role="requester">🏢 依頼者</button>
+      </div>
+      ${isPerformer ? `
+        <label>お名前(活動名)</label>
+        <input type="text" id="setupName" placeholder="例:山田 花子">
+        <label>区分</label>
+        <select class="full" id="setupGenre">
+          ${GENRES.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}
+        </select>
+        <label>活動エリア</label>
+        <select class="full" id="setupArea">${areaOpts}</select>
+        <div class="note" style="margin-top:14px;">料金・出演可能日・NG条件などの詳細プロフィールは、登録後にマイページから設定できるようになります(次の開発ステップで実装予定)。</div>
+      ` : `
+        <label>依頼者のタイプ</label>
+        <div class="day-picker">
+          <button type="button" class="day-toggle on" data-req-type="company" id="reqTypeCompany">🏢 企業</button>
+          <button type="button" class="day-toggle" data-req-type="individual" id="reqTypeIndividual">👤 個人</button>
+        </div>
+        <label id="setupNameLabel">企業・屋号名</label>
+        <input type="text" id="setupName" placeholder="例:株式会社◯◯">
+        <div id="industryWrap">
+          <label>業種</label>
+          <input type="text" id="setupIndustry" placeholder="例:美容サロン、観光PRなど">
+        </div>
+        <label>エリア</label>
+        <select class="full" id="setupArea">${areaOpts}</select>
+      `}
+      <div class="auth-error" id="setupError"></div>
+      <button class="btn primary" id="setupSubmit" style="width:100%;margin-top:8px;">この内容で登録する</button>
+      <button class="btn ghost" id="setupLogout" style="width:100%;margin-top:10px;">ログアウト</button>
+    </div>
+  `;
+  document.querySelectorAll("[data-setup-role]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      authRole = b.dataset.setupRole;
+      main.dataset.roleTouched = "1";
+      renderProfileSetup();
+    });
+  });
+
+  let reqType = "company";
+  document.querySelectorAll("[data-req-type]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      reqType = b.dataset.reqType;
+      document.getElementById("reqTypeCompany").classList.toggle("on", reqType==="company");
+      document.getElementById("reqTypeIndividual").classList.toggle("on", reqType==="individual");
+      document.getElementById("industryWrap").style.display = reqType==="company" ? "" : "none";
+      document.getElementById("setupNameLabel").textContent = reqType==="company" ? "企業・屋号名" : "お名前・ニックネーム";
+      document.getElementById("setupName").placeholder = reqType==="company" ? "例:株式会社◯◯" : "例:さくら";
+    });
+  });
+
+  document.getElementById("setupLogout").addEventListener("click", async ()=>{
+    try{ await sb.auth.signOut(); }catch(e){}
+    authUser = null; authAccount = null; authView = "login";
+    render();
+  });
+
+  document.getElementById("setupSubmit").addEventListener("click", async ()=>{
+    if(authBusy) return;
+    const errEl = document.getElementById("setupError");
+    errEl.textContent = "";
+    const name = document.getElementById("setupName").value.trim();
+    const area = document.getElementById("setupArea").value;
+    if(!name){ errEl.textContent = "お名前を入力してください"; return; }
+    authBusy = true;
+    const btn = document.getElementById("setupSubmit");
+    btn.disabled = true; btn.textContent = "登録中...";
+    try{
+      let error;
+      if(authRole === "performer"){
+        const genre = document.getElementById("setupGenre").value;
+        ({ error } = await sb.from("performers").insert({ user_id: authUser.id, name, genre, area }));
+      } else {
+        const industryEl = document.getElementById("setupIndustry");
+        const industry = (reqType === "company" && industryEl) ? industryEl.value.trim() : "";
+        ({ error } = await sb.from("requesters").insert({ user_id: authUser.id, type: reqType, name, industry, area }));
+      }
+      if(error){ errEl.textContent = "登録に失敗しました:" + error.message; return; }
+      await loadAuthAccount();
+      render();
+    }catch(e){
+      errEl.textContent = "通信に失敗しました。ネットワークを確認してください";
+    }finally{
+      authBusy = false;
+      const btn2 = document.getElementById("setupSubmit");
+      if(btn2){ btn2.disabled = false; btn2.textContent = "この内容で登録する"; }
+    }
+  });
 }
 
 function trustScore(p){
@@ -476,6 +754,8 @@ async function compressImageToLimit(file, limitBytes=350000){
 
 function render(){
   const app = document.getElementById("app");
+  // Supabase接続時は、ログイン+プロフィール登録が済むまで認証画面を表示する
+  if(sb && !authAccount){ renderAuthGate(); return; }
   const co = currentCompany();
   app.innerHTML = `
     <header>
@@ -485,6 +765,11 @@ function render(){
         <button class="${view==='rankings'?'active':''}" data-nav="rankings">ランキング</button>
       </nav>
     </header>
+    ${sb && authAccount ? `
+    <div class="company-bar" id="authBar">
+      <span>ログイン中: <span class="auth-bar-name">${escapeHtml(authAccount.row.name)}</span> (${authAccount.kind==='performer'?'出演者':'依頼者'})</span>
+      <button id="logoutBtn">ログアウト</button>
+    </div>` : ''}
     <div class="company-bar" id="companyBar">
       <span>依頼者として: <strong>${co ? escapeHtml(co.name) : '未設定'}</strong>${co ? ` (信用${companyTrustScore(co)})` : ''}</span>
       <button id="companyBarBtn">切替 ▾</button>
@@ -499,6 +784,12 @@ function render(){
   const fabBtn = document.getElementById("fabBtn");
   if(fabBtn) fabBtn.addEventListener("click", ()=>{ showForm = true; renderModal(); });
   document.getElementById("companyBarBtn").addEventListener("click", ()=>{ showCompanyModal = true; renderModal(); });
+  const logoutBtn = document.getElementById("logoutBtn");
+  if(logoutBtn) logoutBtn.addEventListener("click", async ()=>{
+    try{ await sb.auth.signOut(); }catch(e){}
+    authUser = null; authAccount = null; authView = "login";
+    render();
+  });
 
   if(view==="browse") renderBrowse();
   else renderRankings();
